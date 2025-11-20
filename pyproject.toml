@@ -1,0 +1,27 @@
+[project]
+name = "yamlpp"
+version = "0.1.0"
+description = "YAML Preprocessor"
+readme = "README.md"
+authors = [{ name = "Laurent" }]
+requires-python = ">=3.11"
+dependencies = [
+    "hjson>=3.1.0",
+    "jinja2>=3.1.6",
+    "pyyaml>=6.0.3",
+    "rich>=14.2.0",
+    "super-collections>=0.6.2",
+]
+
+license = { file = "LICENSE" }
+
+[project.scripts]
+yamlpp = "yamlpp.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=9.0.1",
+]
