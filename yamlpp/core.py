@@ -14,11 +14,11 @@ import ast
 
 from jinja2 import Environment, StrictUndefined
 from jinja2.exceptions import UndefinedError as Jinja2UndefinedError
-from super_collections import super_collect, SuperCollection, SuperDict
 
 
 from .stack import Stack
 from .util import yaml, load_yaml, dequote, get_line_number, validate_node
+from .util import CommentedMap, CommentedSeq # Patched versions
 from .import_modules import get_exports
 
 
@@ -98,9 +98,9 @@ class MappingEntry:
             if strict:
                 if err_msg is None:
                     if isinstance(key, str):
-                        err_msg = f"Structure '{self.key}' does not contain '{key}'"
+                        err_msg = f"Map '{self.key}' does not contain '{key}'"
                     elif isinstance(key, int):
-                        err_msg = f"Sequence in '{self.key}' does not contain {key}nth element"
+                        err_msg = f"Sequence in {self.key}' does not contain {key}nth element"
                 raise YAMLppError(self.value, Error.KEY, err_msg)
             else:
                 return None
@@ -124,7 +124,6 @@ class Interpreter:
         "Initialize with the YAMLpp source code"
         self._yaml = None
         self._tree = None
-        self._dot_tree = None
         if not source_dir:
             # working directory
             self._source_dir = os.getcwd()
@@ -165,7 +164,7 @@ class Interpreter:
         return self._initial_tree
         
     @property
-    def context(self) -> SuperDict:
+    def context(self) -> Node:
         "Return the top-level .context section or None"
         # print("INITIAL TREE")
         # print(self.initial_tree)
@@ -219,8 +218,7 @@ class Interpreter:
         assert self._tree is not None, "Empty tree!"
 
         self._yaml = self.to_yaml(self._tree)
-        self._dot_tree = super_collect(self._tree)
-        return self._dot_tree
+        return self._tree
     
 
     @property
@@ -231,10 +229,10 @@ class Interpreter:
         It returns a list/dictionary, accessible with the dot notation
         (but without the meta data, etc.)
         """
-        if self._dot_tree is None:
+        if self._tree is None:
             self.render_tree()
-        assert self._dot_tree is not None, "Failed to regenerate tree!"
-        return self._dot_tree
+        assert self._tree is not None, "Failed to regenerate tree!"
+        return self._tree
     
         
     
@@ -295,7 +293,7 @@ class Interpreter:
         
         return new_scope     
 
-    def process_node(self, node: Node) -> Any:
+    def process_node(self, node: Node) -> Node:
         """
         Process a node in the tree
         Dispatch a YAMLpp node to the appropriate handler.
@@ -322,9 +320,11 @@ class Interpreter:
                 new_scope = self.get_scope(params_block)
                 self.stack.push(new_scope)
                 self.jinja_env.filters.push({})
-            
-            result_dict:dict = {}
-            result_list:list = []
+
+            result_dict = CommentedMap()
+            result_list = CommentedSeq()           
+            # result_dict:dict = {}
+            # result_list:list = []
             for key, value in node.items():
                 entry = MappingEntry(key, value)
                 if key == ".context":
@@ -537,7 +537,6 @@ class Interpreter:
         # create the new block and copy the arguments as context
         actions = function['.do']
         new_block = actions.copy()
-        assert not isinstance(new_block, SuperCollection)
         new_block['.context'] = assigned_args
         return self.process_node(new_block)
 

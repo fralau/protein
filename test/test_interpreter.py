@@ -2,8 +2,12 @@
 Test the interpreter (basic functions)
 """
 from pathlib import Path
-from yamlpp import Interpreter
+
 from super_collections import SuperDict
+
+
+from yamlpp import Interpreter
+from yamlpp.util import print_yaml
 
 CURRENT_DIR = Path(__file__).parent 
 
@@ -23,9 +27,8 @@ def test_01():
 
 
     tree = i.tree
-    assert isinstance(tree, SuperDict), f"Tree is not SuperDict but a {type(tree).__name__}!"
     r = i.yaml # renders
-    print(r)
+    print_yaml(r)
 
     # interpretation
     assert tree.server.host == 'localhost'
@@ -49,12 +52,12 @@ def test_02():
     i.load(FILENAME)
 
     assert i.context is not None, "Context should not be empty"
-    i.context['env'] = 'dev'
-    i.context['comment'] = 'This is added'
+    i.context.env = 'dev'
+    i.context.comment = 'This is added'
 
     tree = i.tree
     r = i.yaml # renders
-    print(r)
+    print_yaml(r)
     
     # .switch
     assert tree.server.url == 'http://localhost:5000'
@@ -71,7 +74,7 @@ def test_import_01():
 
     tree = i.tree
     r = i.yaml # renders
-    print(r)
+    print_yaml(r)
 
     # .switch
     assert tree.server.url == 'http://test.example.com'
@@ -101,11 +104,11 @@ def test_import_02():
     i = Interpreter()
     i.load(FILENAME)
     # modify parameter before rendering
-    i.context['env']= 'prod'
+    i.context.env = 'prod'
 
     tree = i.tree
     r = i.yaml # renders
-    print(r)
+    print_yaml(r)
 
     # .if based on global
     assert tree.database.port == 5432, "Error in .if"
@@ -120,7 +123,7 @@ def test_module():
 
     tree = i.tree
     r = i.yaml # renders
-    print(r)
+    print_yaml(r)
 
     data = tree.data
     assert data.greeting == "Hello Hello world!", "Error in module function"
@@ -135,4 +138,4 @@ def test_function():
     i.load(FILENAME)
     tree = i.tree
     r = i.yaml # renders
-    print(r)
+    print_yaml(r)

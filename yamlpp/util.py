@@ -4,15 +4,20 @@ Common utilities
 
 import os
 from pathlib import Path
+import ast
+from typing import Any
+
+
 # import yaml
 from ruamel.yaml import YAML
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
-import ast
-from typing import Any
 from jsonschema import validate, Draft7Validator
+from rich.console import Console
+from rich.syntax import Syntax
 
 CURRENT_DIR = Path(__file__).parent 
+console = Console()
 
 # -------------------------
 # Interpretation
@@ -30,6 +35,26 @@ def dequote(jinja2_result:str) -> Any:
 # -------------------------
 # YAML
 # -------------------------
+# Monkey patch CommentedMap
+def getattr_patch(self, name):
+    try:
+        # Bypass recursion by calling dict.__getitem__
+        return dict.__getitem__(self, name)
+    except KeyError:
+        raise AttributeError(f"Cannot find attribute '{name}'")
+
+def setattr_patch(self, name, value):
+    # Avoid clobbering internal attributes (like .ca for comments)
+    if name in self.__dict__ or name.startswith('_'):
+        object.__setattr__(self, name, value)
+    else:
+        # Write into the mapping
+        dict.__setitem__(self, name, value)
+
+# Monkey‑patch both
+CommentedMap.__getattr__ = getattr_patch
+CommentedMap.__setattr__ = setattr_patch
+
 
 yaml = YAML(typ='rt')
 
@@ -46,6 +71,11 @@ def load_yaml(filename:str):
 
 
   
+def print_yaml(yaml_text:str):
+    "Print YAML with syntax highlighting"
+    syntax = Syntax(yaml_text, "yaml", line_numbers=True, theme="monokai")
+    # Print with syntax highlighting
+    console.print(syntax)
 
 
 def get_line_number(yaml_obj):
@@ -53,19 +83,24 @@ def get_line_number(yaml_obj):
     Return the first line number (1-based) for a ruamel.yaml object.
     Works with CommentedMap, CommentedSeq, and CommentedScalar.
     """
+
+    
     # Case 1: Mapping → take the first key
+    # NOTE: lines start from 0, so we should add + 1; but we need to take the Parent (-1) 
     if isinstance(yaml_obj, CommentedMap):
         if hasattr(yaml_obj, 'lc') and yaml_obj.lc.data:
             first_key = next(iter(yaml_obj.lc.data))
-            return yaml_obj.lc.data[first_key][0] + 1
+            return yaml_obj.lc.data[first_key][0] + 1 -1
 
     # Case 2: Sequence → take the first index
+    # NOTE: lines start from 0, so we should add + 1; but we need to take the Parent (-1) 
     elif isinstance(yaml_obj, CommentedSeq):
         if hasattr(yaml_obj, 'lc') and yaml_obj.lc.data:
             if 0 in yaml_obj.lc.data:
-                return yaml_obj.lc.data[0][0] + 1
+                return yaml_obj.lc.data[0][0] + 1 -1
 
     # Case 3: Scalar → direct line
+    # NOTE: lines start from 0, so we should add + 1;
     elif hasattr(yaml_obj, 'lc') and yaml_obj.lc.line is not None:
         return yaml_obj.lc.line + 1
 
