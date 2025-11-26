@@ -16,10 +16,37 @@ from rich.console import Console
 from rich.syntax import Syntax
 from rich.text import Text
 
-from .error import YAMLValidationError, YAMLppValidationError, get_line_number
+from .error import YAMLValidationError, YAMLppValidationError, GeneralYAMLppError
 
 CURRENT_DIR = Path(__file__).parent 
 console = Console()
+
+
+# -------------------------
+# OS
+# -------------------------
+from pathlib import Path
+
+def safe_path(root: str|Path, pathname: str) -> Path:
+    """
+    Get a pathname relative to a root, ensure it cannot escape,
+    and verify that it exists.
+    """
+    if isinstance(root, str):
+        root = Path(root)
+    candidate = (root / pathname).resolve()
+
+    # check that candidate is inside root
+    if root not in candidate.parents and candidate != root:
+        raise FileNotFoundError(f"Path {pathname} cannot be higher than {root}")
+
+    # check that candidate exists
+    if not candidate.exists():
+        raise FileNotFoundError(f"Path {candidate} does not exist")
+
+    return candidate
+
+
 
 # -------------------------
 # Interpretation

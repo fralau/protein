@@ -32,7 +32,7 @@ def test_err_0():
     with pytest.raises(YAMLppError) as e:
         tree = i.tree
     assert "not contain '.cases'" in str(e.value)
-    assert "Line 9" in str(e)
+    assert "Line 10" in str(e)
 
 def test_err_1():
     """

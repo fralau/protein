@@ -16,7 +16,7 @@ from jinja2.exceptions import UndefinedError as Jinja2UndefinedError
 from pprint import pprint
 
 from .stack import Stack
-from .util import yaml_rt, load_yaml, validate_node, parse_yaml
+from .util import yaml_rt, load_yaml, validate_node, parse_yaml, safe_path
 from .util import CommentedMap, CommentedSeq # Patched versions
 from .error import YAMLppError, Error
 from .import_modules import get_exports
@@ -495,7 +495,11 @@ class Interpreter:
         Import of an external file
         """
         filename = self.evaluate_expression(entry.value)
-        full_filename = os.path.join(self.source_dir, filename)
+        try:
+            full_filename = safe_path(self.source_dir, filename)
+        except FileNotFoundError as e:
+            raise YAMLppError(entry.value, Error.FILE, e)  
+        # full_filename = os.path.join(self.source_dir, filename)
         _, data = load_yaml(full_filename)
         return self.process_node(data)
     
@@ -505,7 +509,11 @@ class Interpreter:
         The import is scoped.
         """
         filename =  self.evaluate_expression(entry.value)
-        full_filename = os.path.join(self.source_dir, filename)
+        try:
+            full_filename = safe_path(self.source_dir, filename)
+        except FileNotFoundError as e:
+            raise YAMLppError(entry.value, Error.FILE, e)  
+        # full_filename = os.path.join(self.source_dir, filename)
         variables, filters = get_exports(full_filename)
         # note how we use update(), since we add to the local scope:
         self.jinja_env.globals.update(variables)

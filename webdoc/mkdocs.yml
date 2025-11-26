@@ -1,0 +1,35 @@
+site_name: YAMLpp
+site_description: A macro language for dynamic YAML preprocessing
+docs_dir: docs   # source directory for documentation
+
+theme:
+  name: material
+  icon:
+    logo: material/code-tags
+  language: en
+  features:
+    - navigation.sections
+    - navigation.tabs
+  palette:
+    scheme: default
+    primary: teal
+    accent: teal
+
+repo_url: https://github.com/fralau/yamlpp
+edit_uri: edit/main/docs/
+copyright: © Laurent Franceschetti, 2025. Licensed under CC BY-SA 4.0.
+
+nav:
+  - Home: index.md
+  - Reference: reference.md
+  - Guide: guide.md
+
+markdown_extensions:
+  - admonition
+  - footnotes
+  - pymdownx.superfences
+
+plugins:
+  - search
+
+  

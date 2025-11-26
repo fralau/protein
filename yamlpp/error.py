@@ -123,6 +123,7 @@ class Error(str, Enum):
     KEY = "KeyNotFound"
     INDEX = "IndexNotFound"
     ARGUMENTS = "ArgumentMismatch"
+    FILE = "FileError"
     # add more categories as needed
 
 class YAMLppError(GeneralYAMLppError):
