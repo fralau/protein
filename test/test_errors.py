@@ -13,7 +13,7 @@ from yamlpp.util import print_yaml, load_yaml
 
 CURRENT_DIR = Path(__file__).parent 
 
-SOURCE_DIR = CURRENT_DIR / 'Source'
+SOURCE_DIR = CURRENT_DIR / 'source'
 
 def test_err_0():
     """
