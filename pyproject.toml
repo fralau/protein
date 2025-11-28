@@ -26,4 +26,4 @@ where = ["."]
 dev-dependencies = [
     "pytest>=9.0.1",
 ]
-include = ["test/Source/*.yaml"]
+include = ["test/source/*.yaml"]
