@@ -1,5 +1,5 @@
 """
-Test export
+Test .export construct
 """
 import io
 from pathlib import Path

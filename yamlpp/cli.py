@@ -6,8 +6,7 @@ import traceback
 import pprint
 
 import argparse
-import json
-import hjson
+
 
 
 from rich.console import Console
@@ -16,8 +15,14 @@ from rich.syntax import Syntax
 
 
 from .core import Interpreter
-from .util import print_yaml, load_yaml
+from .util import to_yaml
 
+
+# -------------------------
+# General parameters
+# -------------------------
+
+OUTPUT_FORMATS = ["yaml", "json", "toml", "python"]
 
 # -------------------------
 # Presentation
@@ -99,10 +104,10 @@ def main():
     parser.add_argument("-o", "--output", help="Write rendered output to file")
     parser.add_argument("-i", "--initial", action="store_true", help="Show original YAML before processing")
     parser.add_argument("-d", "--debug", action="store_true", 
-                        help="Give debug information in case of error")
+                        help="Give traceback exception in case of error")
     parser.add_argument(
         "-f", "--format",
-        choices=["yaml", "json", "hjson", "python"],
+        choices=OUTPUT_FORMATS,
         default="yaml",
         help="Output format (default: yaml)"
     )
@@ -119,7 +124,7 @@ def main():
         # update the environment with the passed variables
         interpreter.set_context(variables)
         if len(variables):
-            output = interpreter.to_yaml(interpreter.context)
+            output = to_yaml(interpreter.context)
             err_console.print(format_code(output, title='Initial context'))
         
         # Show raw
@@ -133,30 +138,28 @@ def main():
             traceback.print_exc()   # print on stderr
         raise SystemExit(1)
 
-    # Format conversion
+
+    # -------------------
+    # Output
+    # -------------------
     if args.format == "yaml":
         rendered = interpreter.yaml
-        syntax_lang = "yaml"
     elif args.format == "json":
-        rendered = json.dumps(tree, indent=2)
-        syntax_lang = "json"
-    elif args.format == "hjson":
-        rendered = hjson.dumps(tree, indent=2)
-        syntax_lang = "json"  # hjson is close enough for syntax highlighting
+        rendered = interpreter.json
     elif args.format == "python":
-        rendered = pprint.pformat(tree, indent=2, width=80)
-        syntax_lang = "python"
+        rendered = interpreter.repr
+    elif args.format == "toml":
+        rendered = interpreter.toml
 
-    # Pretty print if interactive
-    if sys.stdout.isatty():
-        if args.output:
-            with open(args.output, "w") as f:
-                f.write(rendered)
-            err_console.print(f"[bold yellow]Written to {args.output}[/bold yellow]")
-        else:
-            console.print(format_code(rendered, 
-                                        title=f"Rendered {args.format.upper()}",
-                                       language=syntax_lang))
+    if args.output:
+        with open(args.output, "w") as f:
+            f.write(rendered)
+        err_console.print(f"[bold yellow]Written to {args.output}[/bold yellow]")
+    elif sys.stdout.isatty():
+        # Pretty print if interactive
+        console.print(format_code(rendered, 
+                                    title=f"Rendered {args.format.upper()}",
+                                    language=args.format))
     else:
         # piped into an output file:
         print(rendered)

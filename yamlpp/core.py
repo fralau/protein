@@ -6,7 +6,6 @@ Core application for the YAMLpp interpreter
 
 import os
 from typing import Any, Dict, List, Optional, Union, Tuple
-from io import StringIO
 import ast
 
 
@@ -16,7 +15,8 @@ from jinja2.exceptions import UndefinedError as Jinja2UndefinedError
 from pprint import pprint
 
 from .stack import Stack
-from .util import yaml_rt, load_yaml, validate_node, parse_yaml, safe_path
+from .util import load_yaml, validate_node, parse_yaml, safe_path
+from .util import to_yaml, to_toml, to_json, to_python
 from .util import CommentedMap, CommentedSeq # Patched versions
 from .error import YAMLppError, Error
 from .import_modules import get_exports
@@ -89,7 +89,7 @@ class MappingEntry:
     
     def __str__(self):
         "Print the entry"
-        return(f"{self.key} ->\n{Interpreter.to_yaml(self.value)}")
+        return(f"{self.key} ->\n{to_yaml(self.value)}")
 
 # --------------------------
 # Interpreter
@@ -100,8 +100,8 @@ class Interpreter:
 
     def __init__(self, filename:str=None, source_dir:str=None):
         "Initialize with the YAMLpp source code"
-        self._yaml = None
         self._tree = None
+        self._dirty = True
         if not source_dir:
             # working directory
             self._source_dir = os.getcwd()
@@ -109,6 +109,22 @@ class Interpreter:
         if filename:
             self.load(filename)
         
+    @property
+    def is_dirty(self) -> bool:
+        """
+        A modified tree is "dirty"
+        and must be rendered again
+        """
+        try:
+            return self._dirty
+        except AttributeError:
+            return ValueError("Tree was never loaded")
+        
+    def dirty(self):
+        """
+        (verb) Make the tree dirty (i.e. say that it must be rendered again). 
+        """
+        self._dirty = True
 
 
     def load(self, source:str, is_text:bool=False, validate:bool=False):
@@ -122,6 +138,7 @@ class Interpreter:
         - validate: submit the YAML source to a schema validation
             (effective, but less helpful in case of error)
         """
+        self.dirty()
         if not is_text:
             self._source_dir = os.path.dirname(source)
         self._yamlpp, self._initial_tree = load_yaml(source, is_text)
@@ -219,13 +236,6 @@ class Interpreter:
     # Rendering
     # -------------------------
 
-    @staticmethod
-    def to_yaml(node:Node) -> str:
-        "Translate a tree into a YAML string"
-        buff = StringIO()
-        yaml_rt.dump(node, buff)
-        return buff.getvalue()
-
     
     def render_tree(self) -> Node:
         """
@@ -234,12 +244,12 @@ class Interpreter:
 
         It returns a dictionary accessible with the dot notation.
         """
-        assert len(self.initial_tree) > 0, "Empty yamlpp!"
-        self._tree = self.process_node(self.initial_tree)
-        assert isinstance(self._tree, (dict, list))
-        assert self._tree is not None, "Empty tree!"
-
-        self._yaml = self.to_yaml(self._tree)
+        if self.is_dirty:
+            assert len(self.initial_tree) > 0, "Empty yamlpp!"
+            self._tree = self.process_node(self.initial_tree)
+            assert isinstance(self._tree, (dict, list))
+            assert self._tree is not None, "Empty tree!"
+            self._dirty = False
         return self._tree
     
 
@@ -258,24 +268,7 @@ class Interpreter:
     
         
     
-    def dump(self) -> str:
-        """
-        Render the YAMLpp into YAML
-        (Forcing recalculation)
-        """
-        self.render_tree()
-        return self._yaml
-    
-    @property
-    def yaml(self) -> str:
-        """
-        Return the final yaml code
-        (no calculation unless it's the first time)
-        """
-        if self._yaml is None:
-            self.render_tree()
-        return self._yaml
-
+   
 
     # -------------------------
     # Walking the tree
@@ -585,9 +578,38 @@ class Interpreter:
         filename = self.evaluate_expression(entry['.filename'])
         full_filename = os.path.join(self.source_dir, filename)
         tree = self.process_node(entry['.do'])
-        yaml_output = self.to_yaml(tree)
+        yaml_output = to_yaml(tree)
         with open(full_filename, 'w') as f:
             f.write(yaml_output)
 
-
+    # -------------------------
+    # Output
+    # -------------------------
         
+    @property
+    def yaml(self) -> str:
+        """
+        Return the final yaml output
+        """
+        tree = self.render_tree()
+        return to_yaml(tree)
+
+
+    @property
+    def json(self) -> str:
+        "Return the tree as JSON"
+        tree = self.render_tree()
+        return to_json(tree)
+    
+    @property
+    def toml(self) -> str:
+        "Return the tree as TOML"
+        tree = self.render_tree()
+        return to_toml(tree)
+    
+    @property
+    def repr(self) -> str: 
+        "Return the tree as Python repr-style"
+        tree = self.render_tree()
+        return to_python(tree)
+    

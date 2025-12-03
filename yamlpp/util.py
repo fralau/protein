@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import ast
 from typing import Any
+from io import StringIO
+import json
 
 
 from ruamel.yaml.error import YAMLError
@@ -15,6 +17,8 @@ from jsonschema import validate, Draft7Validator
 from rich.console import Console
 from rich.syntax import Syntax
 from rich.text import Text
+import tomlkit
+import pprint
 
 from .error import YAMLValidationError, YAMLppValidationError, GeneralYAMLppError
 
@@ -132,6 +136,54 @@ def print_yaml(yaml_text: str, filename: str | Path | None = None):
 
 
 
+
+
+
+# -------------------------
+# Serialization formats
+# -------------------------
+
+def to_yaml(node) -> str:
+    "Translate a tree into a YAML string"
+    buff = StringIO()
+    yaml_rt.dump(node, buff)
+    return buff.getvalue()
+
+
+def to_plain(obj):
+    """
+    Recursively convert ruamel.yaml CommentedMap/CommentedSeq
+    into plain Python dicts/lists for TOML serialization.
+    """
+    if isinstance(obj, dict):
+        return {str(k): to_plain(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_plain(v) for v in obj]
+    else:
+        return obj
+
+
+def to_toml(ruamel_tree):
+    """
+    Convert a ruamel.yaml tree into a TOML string.
+    """
+    plain = to_plain(ruamel_tree)
+    return tomlkit.dumps(plain)
+
+
+def to_json(ruamel_tree) -> str:
+    """
+    Convert a ruamel.yaml tree into a TOML string.
+    """
+    s = json.dumps(ruamel_tree, indent=2)
+    json.loads(s)
+    return s
+
+def to_python(tree):
+    """
+    Convert a ruamel.yaml tree into a TOML string.
+    """
+    return pprint.pformat(to_plain(tree), indent=2, width=80)
 
 
 # -------------------------
