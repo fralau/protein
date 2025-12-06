@@ -261,16 +261,84 @@ def define_env(env: ModuleEnvironment):
 This makes variables and filters from `module.py` available in Jinja2 expressions.
 
 ### `.export`
-**Definition**: Export the current portion of the tree into an external file  
+**Definition**: Export the current portion of the tree into an external file. The tree is
+normalized, in the sense that
+
+- it is turned into a pure tree (references to anchors are replaced by the actual node)
+- all types are: dict, list, str, int, float and bool.
+
 **Example**:
 ```yaml
 .export:
   .filename: "export/foo.yaml"
-  .do: ... # thepart you wish to export.
+  .format: yaml          # optional
+  .args:    
+    indent: 4            # control indentation width
+  .do: ...               # the part you wish to export.
 ```
 
-The tree to be exported can be either plain YAML or contain YAMLpp constructs
+The exported can be either plain YAML or other or contain YAMLpp constructs
 (which will be expanded into YAML, before being exported).
+
+- The file extension (`yaml`, `json`, `toml`...) is optional.
+- The `.format` keyword is optional.
+- The `.args` keyword is used for the additional arguments passed to the format-specific 
+  export function.
+
+
+=== "JSON, TOML and others"
+
+    | Format   | Library / Function                  | Implicit Argument(tree)                  | Optional Arguments                                                                 | Documentation |
+    |----------|-------------------------------------|------------------------------------------|------------------------------------------------------------------------------------|---------------|
+    | **json** | `json.dumps(obj, **kwargs)`         | `obj` (serializable Python object)       | `skipkeys`, `ensure_ascii`, `check_circular`, `allow_nan`, `indent`, `separators`, `default`, `sort_keys`, `cls` | [Python json docs](https://docs.python.org/3/library/json.html#json.dumps) |
+    | **toml** | `tomlkit.dumps(data)`               | `data` (dict or TOMLDocument)            | None — intentionally minimal, style‑preserving only                                | [tomlkit docs](https://tomlkit.readthedocs.io/en/latest/api/#tomlkit.dumps) |
+    | **python** | `repr`                            | expression                               | —                                                                                  | [Python docs](https://docs.python.org/3/library/functions.html#repr) |
+
+
+=== "YAML"
+
+    The logic is handled directly by the function `yamlpp.util.to_yaml()`.
+
+
+    !!! Tip "Reason why"  
+        The reason why the tool had to implement its own export argument specification, is that
+        [Ruamel](https://yaml.dev/doc/ruamel.yaml/) does not offer a simple,
+        data-driven way of specifying the output
+        (instead would have to use methods to set each parameter).
+
+
+
+
+    This is the table of arguments for the `yaml` format:
+
+    | Argument             | Description                                                                 | Values                          | Default Value (ruamel.yaml) | Output                 |
+    |----------------------|-------------------------------------------------------------------------|------------------------------------------|-----------------------------|-------------------------------------------|
+    | `indent`             | Spaces for nested mappings and sequences                                | Integer ≥ 1                              | 2                           | Controls block indentation depth          |
+    | `offset`             | Spaces between sequence dash (`-`) and item content                     | Integer ≥ 0                              | 2                           | Affects alignment of list items           |
+    | `explicit_start`     | Emit `---` at start of document                                         | True / False                             | False                       | Adds YAML document start marker           |
+    | `explicit_end`       | Emit `...` at end of document                                           | True / False                             | False                       | Adds YAML document end marker             |
+    | `allow_unicode`      | Permit non‑ASCII characters                                             | True / False                             | True                        | Controls escaping of Unicode              |
+    | `canonical`          | Emit canonical form (explicit scalars, sorted keys)                     | True / False                             | False                       | Produces strict, verbose YAML             |
+    | `width`              | Preferred line width before wrapping                                    | Integer ≥ 0                              | 80                          | Controls line breaks in scalars           |
+    | `preserve_quotes`    | Keep original quoting style when round‑tripping                         | True / False                             | False                       | Preserves `'` vs `"` in output            |
+    | `typ`                | Loader/dumper type                                                      | "rt", "safe", "base", "unsafe"           | "rt"                        | Determines round‑trip vs safe mode        |
+    | `pure`               | Use pure Python implementation                                          | True / False                             | None (ruamel decides)       | Affects performance, not output           |
+    | `version`            | YAML specification version                                              | Tuple (major, minor)                     | None                        | Adds `%YAML x.y` directive                |
+
+
+    !!! Warning "Default values"
+        YAMLpp is not opinionated at all on the values (Ruamel decides), with one exception:
+
+        - **The default `typ` is 'rt', to ensure round-trip**. 
+        - **No duplicate keys are allowed**
+          (this is hard-coded, for consistency: the YAML spec explicitly forbids it,
+          and a second key would override the earlier one, which could introduce undetected bugs). 
+
+
+
+
+
+
 
 **Output**:
 None (the tree is exported to the external file)

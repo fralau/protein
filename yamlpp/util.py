@@ -29,6 +29,9 @@ CURRENT_DIR = Path(__file__).parent
 console = Console()
 
 FILE_FORMATS = ['yaml', 'json', 'toml', 'python']
+
+
+
 # -------------------------
 # OS
 # -------------------------
@@ -73,6 +76,7 @@ def dequote(jinja2_result:str) -> Any:
 # -------------------------
 # Monkey patch CommentedMap
 def getattr_patch(self, name):
+    "Implement dot notation (reading), to help testing"
     try:
         # Bypass recursion by calling dict.__getitem__
         return dict.__getitem__(self, name)
@@ -80,6 +84,7 @@ def getattr_patch(self, name):
         raise AttributeError(f"Cannot find attribute '{name}'")
 
 def setattr_patch(self, name, value):
+    "Implement dot notation (writing), to help testing"
     # Avoid clobbering internal attributes (like .ca for comments)
     if name in self.__dict__ or name.startswith('_'):
         object.__setattr__(self, name, value)
@@ -87,13 +92,33 @@ def setattr_patch(self, name, value):
         # Write into the mapping
         dict.__setitem__(self, name, value)
 
-# Monkey‑patch both
+# Monkey‑patch
 CommentedMap.__getattr__ = getattr_patch
 CommentedMap.__setattr__ = setattr_patch
+CommentedMap.is_patched = True # confirm it is patched.
 
 
-yaml_rt = YAML(typ='rt')
-yaml_rt.allow_duplicate_keys = False
+# Global reusable round-trip YAML instance, using ruamel defaults
+class ImmutableYAML(YAML):
+    "An locked-down Ruamel class"
+    def __init__(self, *args, **kwargs):
+        self._locked = False
+        super().__init__(*args, **kwargs)
+        super().__setattr__('allow_duplicate_keys', False)
+        self._locked = True
+
+    def __setattr__(self, name, value):
+        # allow ruamel internals
+        if name in {"Reader", "Scanner", "Parser", "Composer",
+                    "Constructor", "Resolver"} or name[0] == '_':
+            super().__setattr__(name, value)
+            return
+        if getattr(self, "_locked", False):
+            raise AttributeError(f"ImmutableYAML is locked: cannot set {name}")
+        super().__setattr__(name, value)
+
+YAML_RT = ImmutableYAML(typ='rt')
+
 
 
 def load_yaml(source:str, is_text:bool=False) -> tuple[str, Any]:
@@ -112,17 +137,17 @@ def load_yaml(source:str, is_text:bool=False) -> tuple[str, Any]:
 
     # create the structure
     try:
-        data = yaml_rt.load(text)
+        data = YAML_RT.load(text)
     except YAMLError as e:
         raise YAMLValidationError(e)
     return text, data
 
-yaml_safe = YAML(typ='safe')
+YAML_SAFE = ImmutableYAML(typ='safe')
 
 def parse_yaml(source: str) -> Any:
     "Loads YAML in a safe way (useful for parsing snippets)"
     try:
-        return yaml_safe.load(source)
+        return YAML_SAFE.load(source)
     except YAMLError as e:
         raise YAMLValidationError(e, prefix=f"Incorrect input: {source}\n")
 
@@ -146,20 +171,92 @@ def print_yaml(yaml_text: str, filename: str | Path | None = None):
 # Serialization formats
 # -------------------------
 
-def to_yaml(node) -> str:
+def get_format(filename: str, format:str=None) -> str:
     """
-    Translate a tree into a YAML string.
+    Get the file format of a file, from its filename or explicit format specification.
 
-    It's the pure Ruamel function.
+    Rules:
+
+    1. Use the format parameter, or
+    2. Use the filename extension.
+
+    The format must be in the list of supported file formats.
     """
-    buff = StringIO()
-    yaml_rt.dump(node, buff)
-    return buff.getvalue()
+    if format and not isinstance(format, str):
+        raise TypeError(f"Format, if specified, must be a string, not a {type(format).__name__}: {format}")
+    if format:
+        ext = format.lower()
+    else:
+        ext = os.path.splitext(filename)[1].lstrip(".").lower()
+        if not ext:
+            raise ValueError(f"Cannot determine format for '{filename}'")
+    if ext not in FILE_FORMATS:
+        raise ValueError(f"Format '{ext}' is unsupported; supported: {FILE_FORMATS}")
+    return ext
 
 
 
 
-def flatten(node):
+
+def to_yaml(
+    node,
+    *,
+    indent: int | None = None,
+    offset: int | None = None,
+    explicit_start: bool | None = None,
+    explicit_end: bool | None = None,
+    allow_unicode: bool | None = None,
+    canonical: bool | None = None,
+    width: int | None = None,
+    preserve_quotes: bool | None = None,
+    typ: str | None = None,
+    pure: bool | None = None,
+    version: tuple[int, int] | None = None,
+) -> str:
+    """
+    Serialize a Python object or ruamel.yaml node to a YAML string.
+
+    If all arguments are None, reuse the global `YAML_RT` instance.
+    Otherwise, create a new YAML object and apply only the arguments
+    explicitly provided. Defaults are left to ruamel.yaml itself.
+    """
+    if all(arg is None for arg in (
+        indent, offset, explicit_start, explicit_end, allow_unicode,
+        canonical, width, preserve_quotes, typ, pure, version
+    )):
+        yaml = YAML_RT
+    else:
+        yaml = YAML(typ=typ or "rt", pure=pure)
+        yaml.allow_duplicate_keys = False
+        if version is not None:
+            yaml.version = version
+        if indent is not None:
+            yaml.indent(mapping=indent, sequence=indent)
+        if offset is not None:
+            yaml.indent(offset=offset)
+        if explicit_start is not None:
+            yaml.explicit_start = explicit_start
+        if explicit_end is not None:
+            yaml.explicit_end = explicit_end
+        if allow_unicode is not None:
+            yaml.allow_unicode = allow_unicode
+        if canonical is not None:
+            yaml.canonical = canonical
+        if width is not None:
+            yaml.width = width
+        if preserve_quotes is not None:
+            yaml.preserve_quotes = preserve_quotes
+
+    stream = StringIO()
+    yaml.dump(node, stream)
+    return stream.getvalue()
+
+
+
+
+
+
+def normalize(node):
     """
     Recursively convert a ruamel.yaml round-trip tree ('rt') 
     into plain dicts, lists, and scalars.
@@ -178,10 +275,10 @@ def flatten(node):
     elif isinstance(node, (str, int, float, bool)) or node is None:
         return node
     elif isinstance(node, collections.abc.Mapping):
-        return {str(k): flatten(v) for k, v in node.items()}
+        return {str(k): normalize(v) for k, v in node.items()}
     elif isinstance(node, collections.abc.Sequence):
         assert not (isinstance(node, str))
-        return [flatten(v) for v in node]
+        return [normalize(v) for v in node]
     else:
         # fallback: try to coerce to string
         return str(node)
@@ -189,30 +286,32 @@ def flatten(node):
 
 
 
-def to_toml(tree) -> str:
+def to_toml(tree, **kwargs) -> str:
     """
     Convert a ruamel.yaml tree into a TOML string.
     """
-    plain = flatten(tree)
-    return tomlkit.dumps(plain)
+    plain = normalize(tree)
+    return tomlkit.dumps(plain, **kwargs)
 
 
-def to_json(tree) -> str:
+def to_json(tree, **kwargs) -> str:
     """
     Convert a ruamel.yaml tree into a TOML string.
     """
-    plain = flatten(tree)
-    s = json.dumps(plain, indent=2)
+    plain = normalize(tree)
+    s = json.dumps(plain, **kwargs)
     json.loads(s)
     return s
 
 def to_python(tree):
     """
     Convert a ruamel.yaml tree into a TOML string.
+
+    No arguments
     """
-    plain = flatten(tree)
+    plain = normalize(tree)
     # return pprint.pformat(plain, indent=2, width=80)
-    return str(plain)
+    return repr(plain)
 
 CONV_FORMATS = {
     'yaml'   : to_yaml,
@@ -221,18 +320,26 @@ CONV_FORMATS = {
     'toml'   : to_toml
 }
 
-def serialize(tree, format:str='yaml') -> str:
+def serialize(tree, format:str='yaml', kwargs:dict={}) -> str:
     """
-    General serialization function with format
+    General serialization function with format.
+
+    Calls the appropriate function.
+
+    Unsupported kwargs will raise a KeyError.
     """
+    kwargs = kwargs or {}
     if format:
         format = format.lower()
     else: 
         format = 'yaml'
     func = CONV_FORMATS.get(format)
     if func is None:
-        return ValueError(f"Unsupported format {format}")
-    return func(tree)
+        raise ValueError(f"Unsupported format {format}")
+    try:
+        return func(tree, **kwargs)
+    except TypeError as e:
+        raise KeyError(f"Error in additional arguments for conversion to '{format}': {kwargs}\n{e}")
 
 def deserialize(text: str, format: str='yaml', *args, **kwargs):
     """

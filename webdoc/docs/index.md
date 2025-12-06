@@ -44,6 +44,10 @@ The result is pure YAML.
     - It provides declarative constructs without breaking YAML syntax. 
     - It allows modular, reusable, and expressive constructs that generate YAML files.
 
+!!!Tip "Output is not limited to YAML"
+       You can also generate other formats, such as [JSON](https://www.w3schools.com/whatis/whatis_json.asp) or [TOML](https://toml.io/en/).
+       
+       One possible application is to generate JSON files dynamically.
 
 
 ## 🚀 Quickstart

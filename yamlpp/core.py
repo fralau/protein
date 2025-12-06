@@ -16,17 +16,17 @@ from pprint import pprint
 
 from .stack import Stack
 from .util import load_yaml, validate_node, parse_yaml, safe_path
-from .util import to_yaml, serialize
-from .util import CommentedMap, CommentedSeq # Patched versions
+from .util import to_yaml, serialize, get_format
+from .util import CommentedMap, CommentedSeq # Patched versions (DO NOT CHANGE THIS!)
 from .error import YAMLppError, Error
 from .import_modules import get_exports
-
 
 
 
 # --------------------------
 # Language fundamentals
 # --------------------------
+assert CommentedMap.is_patched, "I need the patched version of CommentedMap in .util"
 
 # Type aliases
 BlockNode = Dict[str, Any]
@@ -577,16 +577,20 @@ class Interpreter:
         block = {
             ".filename": ...,
             ".format": ... # optional
+            ".args": { } # the additional arguments
             ".do": {...} or []
         }
         """
         filename = self.evaluate_expression(entry['.filename'])
         full_filename = os.path.join(self.source_dir, filename)
         format = entry.get('.format') # get the export format, if there 
+        kwargs = entry.get('.args') # arguments
         tree = self.process_node(entry['.do'])
-        yaml_output = serialize(tree, format)
+        # work out the actual format, and export
+        actual_format = get_format(filename, format)
+        file_output = serialize(tree, actual_format, kwargs)
         with open(full_filename, 'w') as f:
-            f.write(yaml_output)
+            f.write(file_output)
 
     # -------------------------
     # Output

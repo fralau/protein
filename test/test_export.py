@@ -1,5 +1,8 @@
 """
 Test .export construct
+
+We are testing ROUND-TRIP properties of the export,
+within the limites of the format.
 """
 import io
 from pathlib import Path
@@ -10,64 +13,26 @@ from yamlpp import Interpreter
 from yamlpp.error import YAMLppError, YAMLValidationError
 from yamlpp.util import print_yaml, deserialize, FILE_FORMATS
 
-CURRENT_DIR = Path(__file__).parent 
-EXPORT = "_export" 
 
-SOURCE_DIR = CURRENT_DIR / 'source'
+EXPORT_COMBINATIONS = [(fmt, explicit) for fmt in FILE_FORMATS 
+                                       for explicit in (True, False)]
 
-EXPORT_DIR = SOURCE_DIR / EXPORT
-EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
-def test_export_enviroment():
-    assert SOURCE_DIR.is_dir()
-    assert EXPORT_DIR.is_dir()
-    print("Export dir: ", EXPORT_DIR)
-
-def test_export_0():
+@pytest.mark.parametrize("fmt, explicit", EXPORT_COMBINATIONS)
+def test_handle_export(tmp_path:str, fmt:str, explicit:bool):
     """
-    Test YAMLpp export
+    Test the handle_export() method, specifically with the format argument.
+
+    It tests both the explicit case (where the format is specified), and not explicit.
     """
     
-    SOURCE_FILENAME = SOURCE_DIR / 'test1.yaml'
-    EXPORT_FILENAME = f'{EXPORT}/export1.yaml' # relative
-
-
-
-    i = Interpreter()
-    i.load(SOURCE_FILENAME)
-    
-    # Replace the accounts in the source file by an export clause
-    accounts = i.initial_tree.pop('accounts')
-    block = {'.filename': EXPORT_FILENAME, '.do' : {'accounts': accounts}}
-    i.initial_tree['.export'] = block
-
-    # Compile and export
-    print_yaml(i.yaml)
-
-    # check
-    exported = SOURCE_DIR / EXPORT_FILENAME
-    assert exported.is_file()
-    i2 = Interpreter()
-    i2.load(exported)
-    tree = i2.initial_tree
-    print_yaml(i2.yamlpp, filename=EXPORT_FILENAME)
-    len(tree) == 4
-    tree.accounts[1].name = 'bob'
-    tree.accounts[2].name = 'charlie'
-    # this is pure YAML:
-    assert i2.yamlpp == i2.yaml, "YAML produced should be identical to YAMLpp source"
-
-
-
-@pytest.mark.parametrize("fmt", FILE_FORMATS)
-def test_handle_export_all_formats(tmp_path:str, fmt:str):
-    "Arrange: create interpreter with tmp_path as source_dir"
+    # Arrange: create interpreter with tmp_path as source_dir
     interpreter = Interpreter(source_dir=tmp_path)
 
     entry = {
         ".filename": f"export.{fmt}",
         ".do": {"server": {"foo": "bar", "baz": 5}},
-        ".format": fmt,
+        ".format": fmt if explicit else None,
     }
     # Act: call the real handle_export
     interpreter.handle_export(entry)
@@ -82,3 +47,67 @@ def test_handle_export_all_formats(tmp_path:str, fmt:str):
     parsed = deserialize(content, format=fmt)
     assert parsed["server"]["foo"] == "bar"
     assert parsed["server"]["baz"] == 5
+
+
+# -------------------------
+# Full Chain
+# -------------------------
+
+# Arrange
+CURRENT_DIR = Path(__file__).parent 
+EXPORT = "_export" 
+
+SOURCE_DIR = CURRENT_DIR / 'source'
+
+EXPORT_DIR = SOURCE_DIR / EXPORT
+EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def test_export_enviroment():
+    assert SOURCE_DIR.is_dir()
+    assert EXPORT_DIR.is_dir()
+    print("Export dir: ", EXPORT_DIR)
+
+
+def test_export_yaml():
+    """
+    Test YAMLpp export, with the full chain
+    """
+    
+    SOURCE_FILENAME = SOURCE_DIR / 'test1.yaml'
+    EXPORT_FILENAME = f'{EXPORT}/export1.yaml' # relative
+
+    # Act
+    i = Interpreter()
+    i.load(SOURCE_FILENAME)
+    
+    # Replace the accounts in the source file by an export clause
+    accounts = i.initial_tree.pop('accounts')
+    block = {'.filename': EXPORT_FILENAME, 
+             '.do' : {'accounts': accounts},
+             '.args':
+                {'allow_unicode': False} # will not make any difference here for the round trip
+             }
+    i.initial_tree['.export'] = block
+    print("Destination:")
+    print_yaml(i.yaml)
+
+    # Assert
+    exported = SOURCE_DIR / EXPORT_FILENAME
+    assert exported.is_file()
+    print("Reloading...")
+    i2 = Interpreter()
+    i2.load(exported)
+    tree = i2.initial_tree
+    print("Reloaded YAML (as 'YAMLpp'):")
+    print_yaml(i2.yamlpp, filename=EXPORT_FILENAME)
+    print("Reprocessed YAML:")
+    print_yaml(i2.yaml, filename=EXPORT_FILENAME)
+    len(tree) == 4
+    tree.accounts[1].name = 'bob'
+    tree.accounts[2].name = 'charlie'
+    # this is pure YAML:
+    assert i2.yamlpp == i2.yaml, "YAML produced should be identical to YAMLpp source"
+
+
+
