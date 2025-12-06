@@ -110,7 +110,7 @@ class ImmutableYAML(YAML):
     def __setattr__(self, name, value):
         # allow ruamel internals
         if name in {"Reader", "Scanner", "Parser", "Composer",
-                    "Constructor", "Resolver"} or name[0] == '_':
+                    "Constructor", "Resolver", 'tags'} or name[0] == '_':
             super().__setattr__(name, value)
             return
         if getattr(self, "_locked", False):
