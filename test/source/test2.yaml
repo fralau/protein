@@ -19,7 +19,7 @@ server:
       url: "https://fallback.example.com"
 
 
-.insert: 'import1.yaml'
+.load: 'import1.yaml'
 
 accounts:
   .foreach:

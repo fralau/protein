@@ -397,8 +397,8 @@ class Interpreter:
                     r = self.handle_switch(entry)
                 elif key == ".if":
                     r = self.handle_if(entry)
-                elif key == ".insert":
-                    r = self.handle_insert(entry)
+                elif key == ".load":
+                    r = self.handle_load(entry)
                 elif key == ".import":
                     r = self.handle_import(entry)
                 elif key == ".function":
@@ -527,9 +527,9 @@ class Interpreter:
 
 
 
-    def handle_insert(self, entry:MappingEntry) -> Node:
+    def handle_load(self, entry:MappingEntry) -> Node:
         """
-        Insert of an external file
+        Load an external file (YAML or other format)
 
         In can be either a string (filename), or:
         
@@ -539,7 +539,7 @@ class Interpreter:
             ".args": { } # the additional arguments (dictionary)
         }
         """
-        # print(".insert is recognized", entry.key, entry.value)
+        # print(".load is recognized", entry.key, entry.value)
         if isinstance(entry.value, str):
             filename = self.evaluate_expression(entry.value)
             format = None

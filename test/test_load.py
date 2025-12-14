@@ -1,5 +1,5 @@
 """
-Integration tests for the !insert directive handled by Interpreter.handle_insert.
+Integration tests for the !load directive handled by Interpreter.handle_load.
 
 These tests:
 - use the real Interpreter from yamlpp
@@ -17,11 +17,11 @@ from yamlpp import Interpreter
 from yamlpp.error import YAMLppError, Error
 from yamlpp.util import to_yaml
 
-def test_insert_basic_yaml(tmp_path):
+def test_load_basic_yaml(tmp_path):
     """
-    Test that !insert loads an external YAML file and returns its parsed content.
+    Test that loads an external YAML file and returns its parsed content.
     """
-    # External file to be inserted
+    # External file to be loaded
     DATA = {"a": 1, "b": 2}
     TEXT = to_yaml(DATA)
     external = tmp_path / "data.yaml"
@@ -30,11 +30,11 @@ def test_insert_basic_yaml(tmp_path):
     print(TEXT)
     print("Filename:", external.name)
 
-    # Main YAML using !insert
+    # Main YAML using !load
     main = tmp_path / "main.yaml"
     main.write_text(f"""
 root:
-  .insert:
+  .load:
     .filename: "{external.name}"
 """)
 
@@ -48,15 +48,18 @@ root:
     assert result["root"] == DATA
 
 
-def test_insert_missing_file_raises(tmp_path):
-    INSERTED = "missing.yaml"
-    FULL_INSERTED = tmp_path / INSERTED
+def test_load_missing_file_raises(tmp_path):
+    """
+    Test an attempt to load a missing file
+    """
+    LOADED = "missing.yaml"
+    FULL_LOADED = tmp_path / LOADED
 
     main = tmp_path / 'main.yaml'
     main.write_text(f"""
 root:
-  .insert:
-    .filename: {INSERTED}
+  .load:
+    .filename: {LOADED}
 """)
 
     interp = Interpreter(source_dir=tmp_path)
@@ -68,22 +71,22 @@ root:
     except YAMLppError as err:
         # This is the case we expect
         assert err.err_type == Error.FILE
-        assert INSERTED in str(err)
+        assert LOADED in str(err)
     except Exception as unexpected:
         # Surface *real* unexpected exceptions directly
         raise AssertionError(
             f"Unexpected exception type: {type(unexpected).__name__}"
         ) from unexpected
     else:
-        file_exists = Path(FULL_INSERTED).is_file()
+        file_exists = Path(FULL_LOADED).is_file()
         if file_exists:
-            raise AssertionError(f"YAMLppError was not raised because file exists (filename: {FULL_INSERTED})")
+            raise AssertionError(f"YAMLppError was not raised because file exists (filename: {FULL_LOADED})")
         else:
-            raise AssertionError(f"YAMLppError was not raised and file does not exist (filename: {FULL_INSERTED})")
+            raise AssertionError(f"YAMLppError was not raised and file does not exist (filename: {FULL_LOADED})")
 
 
 
-def test_insert_with_format_override(tmp_path):
+def test_load_with_format_override(tmp_path):
     """
     Test that .format forces a specific deserialization format.
     Here we store JSON in a .txt file and force format=json.
@@ -94,7 +97,7 @@ def test_insert_with_format_override(tmp_path):
     main = tmp_path / "main.yaml"
     main.write_text(f"""
 root:
-  .insert:
+  .load:
     .filename: "{external.name}"
     .format: "json"
 """)
@@ -105,7 +108,7 @@ root:
     assert result["root"] == {"x": 10, "y": 20}
 
 
-def test_insert_with_args(tmp_path):
+def test_load_with_args(tmp_path):
     """
     Test that .args is passed to the deserializer.
     We use YAML but force 'Loader=SafeLoader' as an example argument.
@@ -116,7 +119,7 @@ def test_insert_with_args(tmp_path):
     main = tmp_path / "main.yaml"
     main.write_text(f"""
 root:
-  .insert:
+  .load:
     .filename: "{external.name}"
     .args:
       Loader: "SafeLoader"

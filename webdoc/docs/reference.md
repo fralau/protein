@@ -1,14 +1,16 @@
 # Language reference
 
-## Definitions
+## Glossary
+
+_Terms in the definitions that are defined in this glossary are preceded by an arrow (➙)._
 
 ### General
 
 - **YAMLpp**: A language based on ➙ YAML,
   which ➙ pre-processes a ➙ tree containing ➙ constructs into a plain YAML tree.
 
-- **YAML™**: A data serialization language used in modern applications, mainly
-  for complex, nested configuration files and as a foundation for domain-specific languages (see [Official definition](https://yaml.org/spec/))
+- **YAML™**: A data serialization language used in modern computer programs, mainly
+  for configuration files that are complex and nested, and as a foundation for domain-specific languages (see [Official definition](https://yaml.org/spec/))
 
 - **Pre-process**: To transform high-level data into a plainer form that will be processed. 
 
@@ -29,31 +31,35 @@
 
 - **Value**: In YAML, a ➙ node associated to a ➙ key.
 
+- **Block** A piece of YAML code containing a ➙ sequence or ➙ mapping, 
+  with the  ➙ key on the first line, and the content (node) indented in the following lines. 
+
 ### YAMLpp
+
+
+- **Keyword**: A YAML ➙ key preceded by a dot (`.`), which has a meaning in the context of YAMLpp.
 
 - **Construct**: An instruction of YAMLpp ➙ pre-processing instructions that generates
   one or more YAML ➙ nodes. <br>
   All constructs are valid YAML.<br>
-  Each construct has a name starting with a dot (`.`) and is presented as a ➙ block. <br>
+  Each construct has a ➙ keyword starting with a dot (`.`) and is presented as a ➙ block. <br>
   It is called a construct because it _constructs_ (builds) one or more nodes.
-
-
-- **block** (YAMLpp) A piece of YAML code containing a ➙ sequence or ➙ mapping, with the key on the first line, and the content (node) indented in the following lines. 
   
 
-- **Expression**: (YAMLpp) A ➙ value string containing a ➙ Jinja expression that returns a node. 
+- **Expression**: A string ➙ value containing an expression, which returns a node.
+   An expression is written in the ➙ Jinja language.  
 
-- **Expand**: (YAMLpp) To evaluate a ➙ Jinja expression and return a ➙ node.
+- **Expand / Render**: To evaluate a ➙ Jinja expression and return a ➙ node.
 
-- **Jinja**: The template engine that is used to calculate ➙ values in YAMLpp (see [documentation](https://jinja.palletsprojects.com/)).
+- **Jinja**: The templating engine that is used to calculate ➙ values in YAMLpp (see [documentation](https://jinja.palletsprojects.com/)).
 
-- **module**: (YAMLpp) An imported piece of Python code (file or package) that provides variables, functions and [filters](https://jinja.palletsprojects.com/en/stable/templates/#filters) to the ➙ Jinja environment.
+- **Module**: An imported piece of Python code (file or package) that provides variables, functions and [filters](https://jinja.palletsprojects.com/en/stable/templates/#filters) to the ➙ Jinja environment.
 
 
 
 ## General principles
 
-1. All language constructs are expressed as valid YAML keys, prefixed with the symbol **`.`**.
+1. All language constructs start with keywords (valid YAML keys, prefixed with the symbol **`.`**).
 They "run, transform the tree and disappear".
 1. All other keys in the source file are plain YAML.
 2. A value can be any YAML valid value. 
@@ -188,20 +194,20 @@ result: "Large"
 
 
 
-### `.insert`
+### `.load`
 **Definition**: Insert and preprocesses another YAMLpp (or YAML) file, at this place in the tree.  
 **Example**:
 ```yaml
-.insert: "other.yaml"
+.load: "other.yaml"
 ```
 
 This loads, the contents of `other.yaml` into the current document,
-and inserts it at the place of the .insert statement.
+and loads it at the place of the .load statement.
 
 Complete form:
 
 ```yaml
-.insert:
+.load:
   .filename: "other.yaml"
   .format:
   .args: # arguments are by name
@@ -212,7 +218,7 @@ Complete form:
 - The file extension (`yaml`, `json`, `toml`...) is optional.
 - The `.format` keyword is optional.
 - The `.args` keyword is used for the additional arguments passed to the format-specific 
-  insert function (by name).
+  load function (by name).
 
 
 
@@ -424,34 +430,5 @@ This statement may be used in any part of the YAMLpp tree.
 server:
   address: "{{ get_env('MY_SERVER`)}}"
 ```
-
-
-
-
-
-## 🛠️ Troubleshooting
-
-### Common Errors
-1. **Undefined Variables**: Variable used in an expression is not defined in the current context or scope. Ensure all variables are declared within `.context` or passed correctly.  
-2. **Duplicate keys**: A mapping (dictionary) can have only one key of each type.
-   If a key is repeated, the parser will raise an error.
-   If you are using the same key two times or more, it's likely that you should
-   use a sequence (list) of mappings instead of a mapping.
-   [This is principle applicable to YAML in general.]
-3. **Unquoted Jinja expressions**: A YAMLpp file must be a valid YAML file. It means that values
-  that contain a Jinja expression **must** be quoted: 
-    - ❌ Incorrect: `message: Hello, {{ name }}!`
-    - ✅ Correct: `message:"Hello, {{ name }}!"`
-3. **Missing Functions or Modules**: Occurs if a referenced function or module is not imported or defined. Verify `.module` imports and `.function` definitions.  
-4. **Argument Mismatches**: When calling functions, ensure the number and order of arguments match the `.args` definition.  
-5. **Syntax Errors**: Invalid YAML or incorrect use of YAMLpp directives can cause preprocessing failures. Validate YAML syntax and directive structure.  
-6. **Incorrect Expression Syntax**: Jinja2 expressions must be properly formatted. Check for missing braces, quotes, or invalid operations.  
-
-### Debugging Tips
-- Check error messages carefully for line numbers (in the YAML file) and hints 
-- Use minimal examples to isolate issues  
-- Add Jinja variables that use variables defined in `.context` to print intermediate values  
-- Validate YAML files with external linters   
-
 
 

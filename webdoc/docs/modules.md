@@ -54,7 +54,7 @@ Use:
 - `env.export` as a decorator for a function you want to make visible in Jinja.
 - `env.filter` as a decorator for a filter function.
 
-Otherwise, you can also insert directly variables (and functions) into the `env.variables` dictionary.
+Otherwise, you can also load directly variables (and functions) into the `env.variables` dictionary.
 
 ```python
 """
