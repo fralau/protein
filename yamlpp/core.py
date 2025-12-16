@@ -18,8 +18,10 @@ from .stack import Stack
 from .util import load_yaml, validate_node, parse_yaml, safe_path
 from .util import to_yaml, serialize, get_format, deserialize
 from .util import CommentedMap, CommentedSeq # Patched versions (DO NOT CHANGE THIS!)
-from .error import YAMLppError, Error, JinjaExpressionError
+from .error import YAMLppError, Error, JinjaExpressionError, DispatcherError
 from .import_modules import get_exports
+
+from .sql import SQLConnection, sql_create_engine, sql_text, sql_query, SQLOperationalError
 
 
 
@@ -111,7 +113,8 @@ class Interpreter:
     #  - Create the handler
     #  - Register it in this list
     CONSTRUCTS = ('.do', '.foreach', '.switch', '.if', '.load', '.import', 
-                  '.function', '.call', '.export')
+                  '.function', '.call', '.export', 
+                  '.def_sql', '.exec_sql', '.load_sql')
 
 
 
@@ -185,7 +188,8 @@ class Interpreter:
         self._reset_environment()
 
         if render:
-            self.render_tree()
+            self._tree = self.render_tree()
+            return self.tree
 
     def load_text(self, text:str, render:bool=True):
         """
@@ -295,8 +299,8 @@ class Interpreter:
         if self.is_dirty:
             assert len(self.initial_tree) > 0, "Empty yamlpp!"
             self._tree = self.process_node(self.initial_tree)
-            assert isinstance(self._tree, (dict, list))
-            assert self._tree is not None, "Empty tree!"
+            assert isinstance(self._tree, (dict, list)) or self._tree is None
+            # assert self._tree is not None, "Empty tree!"
             self._dirty = False
         return self._tree
     
@@ -311,7 +315,7 @@ class Interpreter:
         """
         if self._tree is None:
             self.render_tree()
-        assert self._tree is not None, "Failed to regenerate tree!"
+        # assert self._tree is not None, "Failed to regenerate tree!"
         return self._tree
     
         
@@ -363,23 +367,7 @@ class Interpreter:
         
         return new_scope
     
-    def _despatch(self, keyword:str, entry:MappingEntry) -> Node:
-        """
-        Despatch the struct to the proper handler (dunder method)
 
-        '.load' -> self.handle_load()
-        """
-        assert keyword in self.CONSTRUCTS, f"Unknown keyword '{keyword}'"
-        
-        # find the handler method:
-        method_name = f"handle_{keyword[1:]}"
-        if hasattr(self, method_name):
-            # call the handler
-             method = getattr(self, method_name)
-        else:
-            raise AttributeError(f"Missing handler for {method_name}!")
-        # run the method and return the result
-        return method(entry)
         
 
 
@@ -407,8 +395,9 @@ class Interpreter:
             # Process the .context block, if any (local scope)
             params_block = node.get(".context")
             if params_block:
+                self.stack.push({}) # create the scope before doing calculations
                 new_scope = self.get_scope(params_block)
-                self.stack.push(new_scope)
+                self.stack.update(new_scope)
                 self.jinja_env.filters.push({})
 
             result_dict = CommentedMap()
@@ -430,7 +419,10 @@ class Interpreter:
                 # ....
                 # ------
                 elif key in self.CONSTRUCTS:
-                    r = self._despatch(key, entry)
+                    try:
+                        r = self._despatch(key, entry)
+                    except SQLOperationalError as e:
+                        raise YAMLppError(node, Error.SQL, e)
                 else:
                     # normal YAML key
                     try:
@@ -474,15 +466,45 @@ class Interpreter:
     # Specific handlers (after dispatcher)
     # -------------------------
 
+    def _despatch(self, keyword:str, entry:MappingEntry) -> Node:
+        """
+        Despatch the struct to the proper handler (dunder method)
+
+        '.load' -> self.handle_load()
+        """
+        assert keyword in self.CONSTRUCTS, f"Unknown keyword '{keyword}'"
+        
+        # find the handler method:
+        method_name = f"handle_{keyword[1:]}"
+        if hasattr(self, method_name):
+            # call the handler
+             method = getattr(self, method_name)
+        else:
+            raise AttributeError(f"Missing handler for {method_name}!")
+        # run the method and return the result
+        return method(entry)
+        
+
     def handle_do(self, entry:MappingEntry) -> ListNode:
         """
         Sequence of instructions
+
+        Collapse of the result:
+            - only 1 result, returns it.
+            - no result: returns None
         """
         # print(f"*** DO action ***")
         results: ListNode = []
         for node in entry.value:
-            results.append(self.process_node(node))
-        return results
+            r = self.process_node(node)
+            if r:
+                results.append(r)
+        if len(results) == 1:
+            return results[0]
+        elif len(results) == 0:
+            return None
+        else:
+            return results
 
     def handle_foreach(self, entry:MappingEntry) -> List[Any]:
         """
@@ -677,6 +699,62 @@ class Interpreter:
         file_output = serialize(tree, actual_format, **kwargs)
         with open(full_filename, 'w') as f:
             f.write(file_output)
+
+
+
+    def handle_def_sql(self, entry:MappingEntry) -> None:
+        """
+        Declare an SQL connection (SQL Alchemy)
+
+        See: https://docs.sqlalchemy.org/en/14/core/engines.html#sqlalchemy.create_engine
+
+        .name: ... # the name by which the engine will be know
+        .URL: .... # the string that encodes the dialect, DBAPI and the database location
+        .args: ... # additional keyword arguments (optional) 
+        """
+        name = self.evaluate_expression(entry['.name'])
+        url = self.evaluate_expression(entry['.url'])
+        kwargs = self.evaluate_expression(entry.get('args')) or {}
+        self.stack[name] = sql_create_engine(url, **kwargs)
+
+
+    def _sql_query(self, entry:MappingEntry) -> list[dict]:
+        """
+        Helper function for performing a query on an entry
+        """
+        engine_name = self.evaluate_expression(entry['.engine'])
+        engine = self.stack[engine_name]
+        query = self.evaluate_expression(entry['.query']) or {}
+        try:
+            rows = sql_query(engine, query)
+        except SQLOperationalError as e:
+            raise YAMLppError(entry.value, Error.SQL, e)     
+        return rows
+
+    def handle_exec_sql(self, entry:MappingEntry) -> None:
+        """
+        Execute a query on an connection (SQL Alchemy)
+
+        .engine: ... # the name of the engine
+        .query:  ... # the query to be executed
+        """
+        self._sql_query(entry)
+        
+
+    def handle_load_sql(self, entry:MappingEntry) -> ListNode:
+        """
+        Loads data from an SQL connection (SQL Alchemy) as a sequence
+
+        .engine: ... # the name of the engine
+        .query:  ... # the query to be executed
+        """
+        rows = self._sql_query(entry)
+        # print("Load SQL was run:\n", rows)
+        seq = CommentedSeq()
+        for row in rows:
+            # Ensure each row is a YAML node, not a plain dict
+            seq.append(CommentedMap(row))
+        return seq
 
     # -------------------------
     # Output

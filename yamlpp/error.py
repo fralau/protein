@@ -127,7 +127,11 @@ class Error(str, Enum):
     ARGUMENTS = "ArgumentMismatch"
     FILE = "FileError"
     EXPRESSION = "ExpressionError"
+    SQL = "SQLError"
     # add more categories as needed
+
+    def __str__(self):
+        return self.value
 
 class YAMLppError(GeneralYAMLppError):
     """
@@ -144,9 +148,24 @@ class YAMLppError(GeneralYAMLppError):
         super().__init__(line_no, err_type, message)
 
 
+
 # --------------------------
-# Expression error (to be capture)
+# Lower Level Errors
 # --------------------------
+
+class DispatcherError(Exception):
+    "Error raised by the despatcher"
+    def __init__(self, err_type: Error, message: str):
+        self.err_type = err_type
+        self.message = str(message)
+        super().__init__(str(self))
+
+    def __str__(self):
+        return f"[{self.err_type}] {self.message}"
+   
+
+
+
 class JinjaExpressionError(Exception):
     "An Expression error that must be caught later, at first opportunity"
     def __init__(self, expression:str, error:Exception):

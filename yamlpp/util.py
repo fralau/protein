@@ -25,6 +25,10 @@ import pprint
 
 from .error import YAMLValidationError, YAMLppValidationError, GeneralYAMLppError
 
+
+# -------------------------
+# Initialization
+# -------------------------
 CURRENT_DIR = Path(__file__).parent 
 console = Console()
 
@@ -99,9 +103,26 @@ def setattr_patch(self, name, value):
         # Write into the mapping
         dict.__setitem__(self, name, value)
 
+def repr_patch(self):
+    "Structural repr: show first 3 items and always the last one"
+    items = list(self.items())
+    n = len(items)
+
+    if n <= 4:
+        # Small map: show everything
+        return f"<Map {items}>"
+
+    # Large map: show head and tail
+    head = items[:3]
+    tail = items[-1]
+    return f"<Map {head} ... {tail}>"
+
+
+
 # Monkey‑patch
 CommentedMap.__getattr__ = getattr_patch
 CommentedMap.__setattr__ = setattr_patch
+CommentedMap.__repr__    = repr_patch
 CommentedMap.is_patched = True # confirm it is patched.
 
 
