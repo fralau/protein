@@ -237,12 +237,12 @@ def test_servers_to_config(tmp_path):
             .engine: db
             .query: "SELECT id, name, ip FROM servers ORDER BY id"
 
-# config:
-#   .foreach: 
-#     .values: [server, "{{servers}}"]
-#     .do:
-#         - name: "{{ server.name }}"
-#           address: "{{ server.ip }}"
+config:
+  .foreach: 
+    .values: [server, "{{servers}}"]
+    .do:
+        - name: "{{ server.name }}"
+          address: "{{ server.ip }}"
 """)
     text = program.substitute(filename=db_path)
     yaml_program.write_text(text)

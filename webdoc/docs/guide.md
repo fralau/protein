@@ -203,3 +203,157 @@ services:
 - `.context` holds the sequence of service definitions.  
 - `.foreach` iterates over them, and `.call` expands each into a full service block.  
 - We get both **abstraction** (via the function) and **compactness** (via the sequence).  
+
+
+## 📘 Example: Forming a configuration from a database query
+
+Suppose we have an SQL database, with a table `servers`:
+
+
+| id | name   | ip          |
+|----|--------|-------------|
+| 1  | alpha  | 10.0.0.1    |
+| 2  | beta   | 10.0.0.2    |
+| 3  | gamma  | 10.0.0.3    |
+
+We wish to use it to 
+
+This tutorial explains the exact sequence:
+
+```
+.def_sql:
+    .name: db
+    .url: "sqlite:///foo.sqlite"
+                       
+.context:
+    servers:
+        .load_sql:
+            .engine: db
+            .query: "SELECT id, name, ip FROM servers ORDER BY id"
+
+config:
+  .foreach: 
+    .values: [server, "{{servers}}"]
+    .do:
+        - name: "{{ server.name }}"
+          address: "{{ server.ip }}"
+```
+
+Each block is processed in order by the YAMLpp interpreter.  
+Here is what happens step by step.
+
+---
+
+### 1. Define an SQL engine
+
+```
+.def_sql:
+    .name: db
+    .url: "sqlite:///$filename"
+```
+
+**What this does**
+
+- Creates a new SQL engine named `db`.
+- The engine uses a SQLite URL.
+- `$filename` is substituted with the current file’s path.
+
+**Result**
+
+You now have a usable SQL engine called `db` stored in the interpreter’s engine registry.
+
+---
+
+### 2. Load SQL data into the context
+
+```
+.context:
+    servers:
+        .load_sql:
+            .engine: db
+            .query: "SELECT id, name, ip FROM servers ORDER BY id"
+```
+
+**What this does**
+
+- Creates a context variable named `servers`.
+- Executes the SQL query using engine `db`.
+- Fetches rows from the `servers` table.
+- Converts each row into a dictionary like:
+
+```
+{ "id": 1, "name": "alpha", "ip": "10.0.0.1" }
+```
+
+**Result**
+
+`servers` becomes a list of dictionaries:
+
+```
+[
+  {id: 1, name: "alpha", ip: "10.0.0.1"},
+  {id: 2, name: "beta",  ip: "10.0.0.2"},
+  ...
+]
+```
+
+This list is now available for interpolation and iteration.
+
+---
+
+### 3. Iterate over the servers
+
+```
+config:
+  .foreach: 
+    .values: [server, "{{servers}}"]
+    .do:
+        - name: "{{ server.name }}"
+          address: "{{ server.ip }}"
+```
+
+**What this does**
+
+**`.values: [server, "{{servers}}"]`**
+
+- Defines the loop variable name: `server`.
+- Expands `{{servers}}` into the actual list of server dictionaries.
+
+**`.do:`**
+
+For each server, YAMLpp produces:
+
+```
+- name: "<value of server.name>"
+  address: "<value of server.ip>"
+```
+
+**Example output**
+
+```
+config:
+  - name: "alpha"
+    address: "10.0.0.1"
+
+  - name: "beta"
+    address: "10.0.0.2"
+```
+
+Interpolation replaces `{{ server.name }}` and `{{ server.ip }}` with actual values from the SQL result.
+
+---
+
+### Final summary
+
+This YAMLpp program performs a complete data‑driven transformation:
+
+1. Defines an SQL engine (`db`).
+2. Queries the database and stores results in `.context.servers`.
+3. Iterates over each server row.
+4. Interpolates fields into a generated configuration structure.
+
+It is a minimal, declarative ETL pipeline:  
+SQL → context → loop → templated output.
+
+
+

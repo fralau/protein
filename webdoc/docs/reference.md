@@ -370,6 +370,141 @@ YAMLpp constructs are expanded into YAML, before being exported.
 None (the tree is exported to the external file)
 
 
+## Loading from SQL tables
+
+It can be useful to load values from an SQL table.
+YAMLpp uses SQLAlchemy as the underlying tool.
+
+Below is a clean, minimal, **reference‑style** documentation block for the three directives, written in the YAMLpp operational dialect you and I have been stabilizing. No Python, no narrative—just the contract.
+
+
+
+### `.def_sql`
+
+**Purpose:**  
+Declare and register an SQLAlchemy engine under a symbolic name.
+
+**Specification:**  
+```
+def_sql:
+  .name: <engine-name>     # identifier used later
+  .url:  <SQLAlchemy-URL>  # dialect+driver+location string
+  .args: <mapping?>        # optional keyword arguments
+```
+
+**Reference:**  
+SQLAlchemy Engine Creation  
+https://docs.sqlalchemy.org/en/14/core/engines.html#sqlalchemy.create_engine
+
+
+
+**Return:**  
+None.
+
+
+
+
+**Example**
+```yaml
+def_sql:
+  .name: main_db
+  .url: "sqlite:///./data.db"
+  .args:
+    echo: false
+    future: true
+```
+
+
+
+### `.exec_sql`
+
+**Purpose:**  
+Execute an SQL query on a previously declared engine.  
+Used for statements where the result is not consumed (e.g., INSERT, UPDATE, DDL).
+
+**Specification:**  
+```
+exec_sql:
+  .engine: <engine-name>   # name defined via def_sql
+  .query:  <query-object>  # structure understood by sql_query()
+```
+
+
+**Return:**  
+None.
+
+
+**Example**
+```yaml
+exec_sql:
+  .engine: main_db
+  .query:
+    text: |
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        name TEXT,
+        age INTEGER
+      )
+```
+
+or
+
+```yaml
+exec_sql:
+  .engine: main_db
+  .query:
+    text: |
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        name TEXT,
+        age INTEGER
+      )
+```
+
+
+
+
+### `.load_sql`
+
+**Purpose:**  
+Execute an SQL query and return the resulting rows as a YAML sequence of mappings.
+
+**Specification:**  
+```
+load_sql:
+  .engine: <engine-name>   # name defined via def_sql
+  .query:  <query-object>  # structure understood by sql_query()
+```
+
+**Return:**  
+A YAML sequence of mapping nodes, one per row.
+
+**Example**
+```yaml
+load_sql:
+  .engine: main_db
+  .query:
+    text: "SELECT id, name, age FROM users ORDER BY id"
+```
+
+Might expand into:
+
+```yaml
+- id: 1
+  name: Alice
+  age: 30
+- id: 2
+  name: Bob
+  age: 41
+```
+
+
+
+
+
+
+
+
 
 ## Dynamically changing the initial context
 

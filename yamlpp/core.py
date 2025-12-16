@@ -5,7 +5,7 @@ Core application for the YAMLpp interpreter
 """
 
 import os
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Union, Tuple, Self
 import ast
 
 
@@ -16,7 +16,7 @@ from pprint import pprint
 
 from .stack import Stack
 from .util import load_yaml, validate_node, parse_yaml, safe_path
-from .util import to_yaml, serialize, get_format, deserialize
+from .util import to_yaml, serialize, get_format, deserialize, normalize
 from .util import CommentedMap, CommentedSeq # Patched versions (DO NOT CHANGE THIS!)
 from .error import YAMLppError, Error, JinjaExpressionError, DispatcherError
 from .import_modules import get_exports
@@ -70,7 +70,7 @@ class MappingEntry:
 
     def get(self, key:str|int, err_msg:str=None, strict:bool=False) -> Node:
         """
-        Get a child from a node by key, and raise an error if not found.
+        Get a child node from a node by key, and raise an error if not found.
         The value of entry must be either dict (it's an attribute) or list.
         """
         if not isinstance(self.value, (list, dict)):
@@ -90,6 +90,18 @@ class MappingEntry:
                 raise YAMLppError(self.value, Error.KEY, err_msg)
             else:
                 return None
+            
+    def get_sub_entry(self, key:str|int) -> Self:
+        """
+        Get a sub-entry with a string key.
+        Is used for constructs that incorporate another construct with special semantics
+        (like .do)
+        """
+        try:
+            # return an object of the same class
+            return self.__class__(key, self[key])
+        except (KeyError, IndexError) as e:
+            raise YAMLppError(self.value, Error.KEY, e)
             
     def __getitem__(self, key):
         "Same semantics as a dict or list"
@@ -352,26 +364,6 @@ class Interpreter:
             return r
 
 
-    def get_scope(self, params_block: Dict) -> Dict:
-        """
-        Evaluate the values from a (parameters) node,
-        to create a new scope.
-        """
-        new_scope: Dict[str, Any] = {}
-        if isinstance(params_block, dict):
-            for key, value in params_block.items():
-                # print("Key:", key)
-                assert isinstance(self.stack, Stack), f"the stack is not a Stack but '{type(self.stack).__name__}'"
-                new_scope[key] = self.process_node(value)
-        else:
-            raise ValueError(f"A parameter block must be a dictionary found: {type(params_block).__name__}")
-        
-        return new_scope
-    
-
-        
-
-
     def process_node(self, node: Node) -> Node:
         """
         Process a node in the tree
@@ -485,13 +477,33 @@ class Interpreter:
         return method(entry)
         
 
+    def _get_scope(self, params_block: Dict) -> Dict:
+        """
+        Evaluate the values from a (parameters) node,
+        to create a new scope.
+        """
+        new_scope: Dict[str, Any] = {}
+        if isinstance(params_block, dict):
+            for key, value in params_block.items():
+                # print("Key:", key)
+                assert isinstance(self.stack, Stack), f"the stack is not a Stack but '{type(self.stack).__name__}'"
+                # normalize the result, so that it's properly managed as a variable
+                new_scope[key] = normalize(self.process_node(value))
+        else:
+            raise ValueError(f"A parameter block must be a dictionary found: {type(params_block).__name__}")
+        
+        return new_scope
+
+
+
     def handle_context(self, entry:MappingEntry) -> None:
         """
         .context creates a new block.
 
         """
         self.stack.push({}) # create the scope before doing calculations
-        new_scope = self.get_scope(entry.value)
+        new_scope = self._get_scope(entry.value)
+        # print("New scope:\n", new_scope)
         self.stack.update(new_scope)
         self.jinja_env.filters.push({})
         return None
@@ -499,23 +511,28 @@ class Interpreter:
     def handle_do(self, entry:MappingEntry) -> ListNode:
         """
         Sequence of instructions
+        (it will also accept a map)
 
         Collapse of the result:
             - only 1 result, returns it.
             - no result: returns None
         """
         # print(f"*** DO action ***")
-        results: ListNode = []
-        for node in entry.value:
-            r = self.process_node(node)
-            if r:
-                results.append(r)
-        if len(results) == 1:
-            return results[0]
-        elif len(results) == 0:
-            return None
-        else:
-            return results
+        if isinstance(entry.value, CommentedSeq):
+            results: ListNode = []
+            for node in entry.value:
+                r = self.process_node(node)
+                if r:
+                    results.append(r)
+            if len(results) == 1:
+                return results[0]
+            elif len(results) == 0:
+                return None
+            else:
+                return results
+        elif isinstance(entry.value, CommentedMap):
+            # Accept also a map
+            return self.process_node(entry.value)
 
     def handle_foreach(self, entry:MappingEntry) -> List[Any]:
         """
@@ -538,8 +555,10 @@ class Interpreter:
             local_ctx = {}
             local_ctx[var_name] = item
             self.stack.push(local_ctx)
-            do = entry[".do"]
-            results.append(self.process_node(do))
+            # handle the .do block, standardly:
+            do_entry = entry.get_sub_entry('.do')
+            result = self.handle_do(do_entry)
+            results.append(result)
             self.stack.pop()
         return results
 
@@ -679,7 +698,7 @@ class Interpreter:
                               Error.ARGUMENTS,
                               f"No of arguments not matching, expected {len(formal_args)}, found {len(args)}")
         assigned_args = dict(zip(formal_args, args))
-        print("Args:", assigned_args)
+        # print("Args:", assigned_args)
                
 
         # create the new block and copy the arguments as context
