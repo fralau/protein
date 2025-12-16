@@ -112,7 +112,8 @@ class Interpreter:
     # When you create a new construct:
     #  - Create the handler
     #  - Register it in this list
-    CONSTRUCTS = ('.do', '.foreach', '.switch', '.if', '.load', '.import', 
+    CONSTRUCTS = ('.context', '.do', '.foreach', '.switch', '.if', 
+                  '.load', '.import', 
                   '.function', '.call', '.export', 
                   '.def_sql', '.exec_sql', '.load_sql')
 
@@ -394,11 +395,13 @@ class Interpreter:
 
             # Process the .context block, if any (local scope)
             params_block = node.get(".context")
+            new_context = False
             if params_block:
-                self.stack.push({}) # create the scope before doing calculations
-                new_scope = self.get_scope(params_block)
-                self.stack.update(new_scope)
-                self.jinja_env.filters.push({})
+                # self.stack.push({}) # create the scope before doing calculations
+                # new_scope = self.get_scope(params_block)
+                # self.stack.update(new_scope)
+                # self.jinja_env.filters.push({})
+                new_context = True
 
             result_dict = CommentedMap()
             result_list = CommentedSeq()           
@@ -406,9 +409,6 @@ class Interpreter:
             # result_list:list = []
             for key, value in node.items():
                 entry = MappingEntry(key, value)
-                if key == ".context":
-                    # Do not include
-                    r = None
                 # ------
                 # Replace with a dispatcher:
                 # elif key == ".do":
@@ -418,7 +418,7 @@ class Interpreter:
                 #     # print("Returned foreach:",)
                 # ....
                 # ------
-                elif key in self.CONSTRUCTS:
+                if key in self.CONSTRUCTS:
                     try:
                         r = self._despatch(key, entry)
                     except SQLOperationalError as e:
@@ -440,7 +440,7 @@ class Interpreter:
                 else:
                     result_list.append(r)
             
-            if params_block:
+            if new_context:
                 # end of the scope, for these parameters
                 self.stack.pop()
                 self.jinja_env.filters.pop()
@@ -484,6 +484,17 @@ class Interpreter:
         # run the method and return the result
         return method(entry)
         
+
+    def handle_context(self, entry:MappingEntry) -> None:
+        """
+        .context creates a new block.
+
+        """
+        self.stack.push({}) # create the scope before doing calculations
+        new_scope = self.get_scope(entry.value)
+        self.stack.update(new_scope)
+        self.jinja_env.filters.push({})
+        return None
 
     def handle_do(self, entry:MappingEntry) -> ListNode:
         """
@@ -668,13 +679,14 @@ class Interpreter:
                               Error.ARGUMENTS,
                               f"No of arguments not matching, expected {len(formal_args)}, found {len(args)}")
         assigned_args = dict(zip(formal_args, args))
-        # print("Keys:", assigned_args)
+        print("Args:", assigned_args)
                
 
         # create the new block and copy the arguments as context
         actions = function['.do']
         new_block = actions.copy()
         new_block['.context'] = assigned_args
+        new_block.move_to_end('.context', last=False) # brigng first
         return self.process_node(new_block)
 
 
