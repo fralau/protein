@@ -7,6 +7,7 @@ Core application for the YAMLpp interpreter
 import os
 from typing import Any, Dict, List, Optional, Union, Tuple, Self
 import ast
+from pathlib import Path
 
 
 
@@ -721,7 +722,7 @@ class Interpreter:
         return self.process_node(new_block)
 
 
-    def handle_export(self, entry:MappingEntry) -> None:
+    def handle_export(self, entry: MappingEntry) -> None:
         """
         Exports the subtree into an external file
 
@@ -733,15 +734,22 @@ class Interpreter:
         }
         """
         filename = self.evaluate_expression(entry['.filename'])
-        full_filename = os.path.join(self.source_dir, filename)
-        format = entry.get('.format') # get the export format, if there 
-        kwargs = entry.get('.args') or {} # arguments
+        full_filename = Path(self.source_dir) / filename
+
+        # ✅ Ensure the parent directory exists (CI-safe)
+        Path(full_filename).parent.mkdir(parents=True, exist_ok=True)
+
+        format = entry.get('.format')  # get the export format, if there
+        kwargs = entry.get('.args') or {}  # arguments
         tree = self.process_node(entry['.do'])
+
         # work out the actual format, and export
         actual_format = get_format(filename, format)
         file_output = serialize(tree, actual_format, **kwargs)
+
         with open(full_filename, 'w') as f:
             f.write(file_output)
+
 
 
 
