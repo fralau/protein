@@ -91,9 +91,11 @@ def test_export_yaml():
                 {'allow_unicode': False} # will not make any difference here for the round trip
              }
     i.initial_tree['.export'] = block
+    print("Source:")
+    print_yaml(i.yamlpp, "Source")
     i.render_tree()
     print("Destination:")
-    print_yaml(i.yaml)
+    print_yaml(i.yaml, "Result")
 
     # Assert
     exported = EXPORT_ABS / EXPORT_FILENAME
@@ -108,6 +110,7 @@ def test_export_yaml():
     print("Reprocessed YAML:")
     print_yaml(i2.yaml, filename=EXPORT_FILENAME)
     len(tree) == 4
+    print(tree.accounts)
     tree.accounts[1].name = 'bob'
     tree.accounts[2].name = 'charlie'
     # this is pure YAML:

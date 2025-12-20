@@ -8,6 +8,8 @@ import os
 from typing import Any, Dict, List, Optional, Union, Tuple, Self
 import ast
 from pathlib import Path
+from collections.abc import Sequence, Mapping
+
 
 
 
@@ -551,9 +553,9 @@ class Interpreter:
             return self.process_node(entry.value)
         
 
-    def handle_foreach(self, entry:MappingEntry) -> List[Any]:
+    def handle_foreach(self, entry:MappingEntry) -> Node:
         """
-        Loop through a sequence or iterable expression
+        Loop through a sequence or iterable expression.
 
         block = {
             ".values": [var_name, iterable_expr],
@@ -562,22 +564,30 @@ class Interpreter:
         """
         # print("\nFOREACH")
         var_name, iterable_expr = entry[".values"]
+        # print("foreach expression:", iterable_expr)
         result = self.process_node(iterable_expr)
-        # the result was a string; it needs to be converted:
-        # iterable = dequote(result)
-        iterable = result
+        # print("foreach result:", type(result).__name__, "=>", result)
 
-        results: List[Any] = []
-        for item in iterable:
-            local_ctx = {}
-            local_ctx[var_name] = item
-            self.stack.push(local_ctx)
-            # handle the .do block, standardly:
-            do_entry = entry.get_sub_entry('.do')
-            result = self.handle_do(do_entry)
-            results.append(result)
-            self.stack.pop()
-        return collapse_seq(results)
+        if isinstance(result, Sequence):
+            # an iterable
+            iterable = result
+
+            results: List[Any] = []
+            for item in iterable:
+                local_ctx = {}
+                local_ctx[var_name] = item
+                self.stack.push(local_ctx)
+                # handle the .do block, standardly:
+                do_entry = entry.get_sub_entry('.do')
+                result = self.handle_do(do_entry)
+                results.append(result)
+                self.stack.pop()
+            return collapse_seq(results)
+        elif isinstance(result, Mapping):
+            return result
+        else:
+            msg = f"Unexpected expression {iterable_expr} ({result}): it returned a {type(result).__name__} instead of a sequence (or map)."
+            raise YAMLppError(entry.value, Error.EXPRESSION, msg)
 
 
     def handle_switch(self, entry:MappingEntry) -> Node:

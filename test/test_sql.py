@@ -317,7 +317,7 @@ def test_unit_osquery_query_failure():
 
 
 def test_osquery_not_installed():
-    "osquery not installed"
+    "osquery not installed (high-level test)"
     with patch("subprocess.run", side_effect=FileNotFoundError):
         with pytest.raises(YAMLppError, match="osqueryi command not found"):
             yaml, tree = yamlpp_comp(OS_QUERY_PROGRAM)
