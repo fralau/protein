@@ -4,7 +4,7 @@ Core application for the YAMLpp interpreter
 (C) Laurent Franceschetti, 2025
 """
 
-import os
+import os, sys
 from typing import Any, Dict, List, Optional, Union, Tuple, Self
 import ast
 from enum import Enum
@@ -27,6 +27,7 @@ from .util import CommentedMap, CommentedSeq # Patched versions (DO NOT CHANGE T
 from .buffer import render_buffer, Indentation
 from .error import YAMLppError, Error, JinjaExpressionError, DispatcherError
 from .import_modules import get_exports
+
 
 from .sql import sql_create_engine, sql_query, SQLOperationalError, osquery
 
@@ -391,16 +392,10 @@ class Interpreter:
             params_block = node.get(".context")
             new_context = False
             if params_block:
-                # self.stack.push({}) # create the scope before doing calculations
-                # new_scope = self.get_scope(params_block)
-                # self.stack.update(new_scope)
-                # self.jinja_env.filters.push({})
                 new_context = True
 
             result_dict = CommentedMap()
             result_list = CommentedSeq()           
-            # result_dict:dict = {}
-            # result_list:list = []
             for key, value in node.items():
                 entry = MappingEntry(key, value)
                 # ------
@@ -554,6 +549,19 @@ class Interpreter:
         return new_scope
 
 
+    # ---------------------
+    # Printing
+    # ---------------------
+    def handle_print(self, entry:MappingEntry) -> None:
+        """
+        Print the text to stderr
+        """
+        output = self.evaluate_expression(entry.value)
+        print(output, file=sys.stderr)
+
+    # ---------------------
+    # Variables
+    # ---------------------
 
     def handle_context(self, entry:MappingEntry) -> None:
         """
@@ -592,6 +600,10 @@ class Interpreter:
         self.stack.update(block)
         return None
 
+
+    # ---------------------
+    # Control structures
+    # ---------------------
     def handle_do(self, entry:MappingEntry) -> ListNode:
         """
         Sequence of instructions
@@ -602,17 +614,20 @@ class Interpreter:
             - no result: returns None
         """
         # print(f"*** DO action ***")
-        if isinstance(entry.value, CommentedSeq):
+        if isinstance(entry.value, (CommentedSeq, list)):
             results = CommentedSeq()
             for node in entry.value:
                 r = self.process_node(node)
                 if r:
                     results.append(r)
             return collapse_seq(results)
-        elif isinstance(entry.value, CommentedMap):
+        elif isinstance(entry.value, (CommentedMap, dict)):
             # Accept also a map
-            # print("Map within a .do:", entry.value)
             return self.process_node(entry.value)
+        else:
+            if not isinstance(entry.value, str):
+                raise ValueError(f"Unexpected value in entry: {entry.value}")
+            return self.evaluate_expression(entry.value)
         
 
     def handle_foreach(self, entry:MappingEntry) -> Node:
@@ -697,7 +712,9 @@ class Interpreter:
         return r
 
 
-
+    # ---------------------
+    # File management
+    # ---------------------
     def handle_load(self, entry:MappingEntry) -> Node:
         """
         Load an external file (YAML or other format)
@@ -732,7 +749,38 @@ class Interpreter:
         data = deserialize(text, actual_format, **kwargs)
         # _, data = load_yaml(full_filename)
         return self.process_node(data)
-    
+
+    def handle_export(self, entry: MappingEntry) -> None:
+        """
+        Exports the subtree into an external file
+
+        export:
+            .filename: ...,
+            .format: ... # optional
+            .args: { } # the additional arguments
+            .do: {...} or []
+        """
+        filename = self.evaluate_expression(entry['.filename'])
+        full_filename = get_full_filename(self.source_dir, filename)
+        Path(full_filename).parent.mkdir(parents=True, exist_ok=True)
+
+        format = entry.get('.format')  # get the export format, if there
+        kwargs = entry.get('.args') or {}  # arguments
+        tree = self.process_node(entry['.do'])
+
+        # work out the actual format, and export
+        actual_format = get_format(filename, format)
+        file_output = serialize(tree, actual_format, **kwargs)
+
+        with open(full_filename, 'w') as f:
+            f.write(file_output)
+        assert Path(full_filename).is_file()
+        # print(f"Exported to: {full_filename} ✅ ")
+
+    # ---------------------
+    # Programmability and functions
+    # ---------------------
+
     def handle_import(self, entry:MappingEntry) -> None:
         """
         Import a Python module, with variables (function) and filters.
@@ -763,7 +811,7 @@ class Interpreter:
         }
         """
         name = entry['.name']
-        print("Function created with its name!", name)
+        # print("Function created with its name!", name)
         self.stack[name] = entry.value
         return None
 
@@ -788,48 +836,46 @@ class Interpreter:
         
         formal_args = function['.args']
         args = entry['.args']
+        # evaluate each argument:
+        if not isinstance(args, list):
+            raise TypeError(f"The argument provided '{args}' is not a list but a { type(args).__name__}")
+        # do not evaluate at this stage.
+        assert isinstance(args, list)
+        # print("args:", args)
         if len(args) != len(formal_args):
             raise YAMLppError(entry, 
                               Error.ARGUMENTS,
                               f"No of arguments not matching, expected {len(formal_args)}, found {len(args)}")
         assigned_args = dict(zip(formal_args, args))
+        # print("Assigned:", assigned_args)
         # print("Args:", assigned_args)
                
 
         # create the new block and copy the arguments as context
         actions = function['.do']
-        new_block = actions.copy()
-        new_block['.context'] = assigned_args
-        new_block.move_to_end('.context', last=False) # brigng first
-        return self.process_node(new_block)
-
-
-    def handle_export(self, entry: MappingEntry) -> None:
-        """
-        Exports the subtree into an external file
-
-        export:
-            .filename: ...,
-            .format: ... # optional
-            .args: { } # the additional arguments
-            .do: {...} or []
-        """
-        filename = self.evaluate_expression(entry['.filename'])
-        full_filename = get_full_filename(self.source_dir, filename)
-        Path(full_filename).parent.mkdir(parents=True, exist_ok=True)
-
-        format = entry.get('.format')  # get the export format, if there
-        kwargs = entry.get('.args') or {}  # arguments
-        tree = self.process_node(entry['.do'])
-
-        # work out the actual format, and export
-        actual_format = get_format(filename, format)
-        file_output = serialize(tree, actual_format, **kwargs)
-
-        with open(full_filename, 'w') as f:
-            f.write(file_output)
-        assert Path(full_filename).is_file()
-        # print(f"Exported to: {full_filename} ✅ ")
+        if isinstance(actions, str):
+            new_block = actions
+        else:
+            new_block = actions.copy()
+        if isinstance(new_block, (CommentedSeq, list)):
+            # normal list (or even a plain string), you need to create a dictionary
+            new_block = {'.context': assigned_args, '.do': new_block}
+        elif isinstance(new_block, str):
+            # str
+            new_block = {'.context': assigned_args, '.do': new_block}
+        elif isinstance(new_block, (CommentedMap, dict)):
+            # a simple dict
+            new_block['.context'] = assigned_args
+            new_block.move_to_end('.context', last=False) # brigng first
+        else:
+            raise TypeError("Invalid .do block")
+        # print("Context:", list(assigned_args.keys()))
+        # print(new_block)
+        r = self.process_node(new_block)
+        if isinstance(r, (list, CommentedSeq)):
+            r = collapse_seq(r)
+            print(r)
+        return r
 
 
     # ---------------------
@@ -964,15 +1010,6 @@ class Interpreter:
         assert Path(full_filename).is_file()
 
 
-    # ---------------------
-    # Printing
-    # ---------------------
-    def handle_print(self, entry:MappingEntry) -> None:
-        """
-        Print the text
-        """
-        output = self.evaluate_expression(entry.value)
-        print(output)
 
     # -------------------------
     # Output

@@ -23,7 +23,7 @@ from rich.text import Text
 import tomlkit
 
 from .error import YAMLValidationError, YAMLppValidationError, GeneralYAMLppError
-
+from .dotenv import DotEnv
 
 # -------------------------
 # Initialization
@@ -31,8 +31,9 @@ from .error import YAMLValidationError, YAMLppValidationError, GeneralYAMLppErro
 CURRENT_DIR = Path(__file__).parent 
 console = Console()
 
+# file formats/extensions
 # ypp format is considered here equivalent to yaml (to facilitate .load)
-FILE_FORMATS = ['yaml', 'json', 'toml', 'python', 'ypp']
+FILE_FORMATS = ['yaml', 'json', 'toml', 'python', 'ypp', 'env']
 
 
 
@@ -140,8 +141,6 @@ def collapse_seq(seq:collections.abc.Sequence):
 
     - A sequence of 0 returns None
     - A sequence of 1 returns the element (unless keep_singleton=True).
-    - A sequence of more than 1, where each element is a mapping of cardinality 1,
-      returns a mapping of cardinality n
     - Otherwise, no collapse
     """
    # print("Collapse...")
@@ -155,7 +154,11 @@ def collapse_seq(seq:collections.abc.Sequence):
         # singletons (lists of one) are unpacked; 
         return r
     else:
-        # print("Return the item")
+
+        # if all(isinstance(x, collections.abc.Seq) and len(x) == 1 for x in seq):
+        #     return [x[0] for x in seq]
+
+        # "Return the list":
         return seq
 
 
@@ -236,6 +239,7 @@ def print_yaml(yaml_text: str, filename: str | Path | None = None):
         console.print(text)
     syntax = Syntax(yaml_text, "yaml", line_numbers=True, theme="monokai")
     console.print(syntax)
+
 
 
 
@@ -389,12 +393,18 @@ def to_python(tree):
     # return pprint.pformat(plain, indent=2, width=80)
     return repr(plain)
 
+
+
+
+
+
 CONV_FORMATS = {
     'yaml'   : to_yaml,
     'json'   : to_json,
     'python' : to_python,
     'toml'   : to_toml,
     'ypp'    : to_yaml, # it's a pure alias of yaml
+    'env' : DotEnv.dumps,
 }
 
 def serialize(tree, format:str='yaml', **kwargs) -> str:
@@ -446,6 +456,8 @@ def deserialize(text: str, format: str='yaml', *args, **kwargs):
         return tomlkit.loads(text, *args, **kwargs)
     elif format == "python":
         return ast.literal_eval(text)
+    elif format == "env":
+        return DotEnv.loads(text)
     else:
         raise ValueError(f"Unsupported format: {format}")
 

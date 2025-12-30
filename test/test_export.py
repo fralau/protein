@@ -13,8 +13,11 @@ from yamlpp import Interpreter
 from yamlpp.error import YAMLppError, YAMLValidationError
 from yamlpp.util import print_yaml, deserialize, FILE_FORMATS
 
+# this formats are not teste because they are not general enough
+EXCLUDED_FORMATS = ['env']
 
-EXPORT_COMBINATIONS = [(fmt, explicit) for fmt in FILE_FORMATS 
+EXPORT_COMBINATIONS = [(fmt, explicit) for fmt in FILE_FORMATS
+                                       if fmt not in EXCLUDED_FORMATS
                                        for explicit in (True, False)]
 
 

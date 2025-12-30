@@ -2,7 +2,90 @@
 
 ## Introduction
 
-The purpose of this page is to introduce two real cases.
+The purpose of this page is to introduce real cases.
+
+## 📘 Example: Hello World
+
+### To the console
+
+You can write "Hello World" to the console, though that does not really illustrate
+the capabilities of YAMLLpp.
+
+Create a file `hello.ypp`:
+
+```yaml
+.print "Hello World"
+```
+
+Execute the file:
+```sh
+yamlpp hello.ypp
+```
+
+And see the result on the console (it's goes to the stderr file):
+
+```
+Hello World
+```
+
+!!! Note
+    The `.print` construct is used mostly for tracing execution and debugging.
+
+### Creating a YAML output with "Hello World" (simple)
+
+Create a file `hello.ypp`:
+```yaml  
+result: Hello World
+```
+
+
+
+Execute the file:
+```sh
+yamlpp hello.ypp
+```
+
+This does nothing special, since it is already a plain YAML file:
+```yaml  
+result: Hello World
+```
+
+### Creating a YAML output with "Hello World" (with variable)
+
+Create a file `hello.ypp`:
+```yaml  
+.context:
+  message: Hello World
+result: "{{ message }}"
+```
+
+The `.context` construct allows you to define variables, which you can later call.
+
+To call a variable always use a Jinja expression, within double curly quotes
+([Jinja](https://jinja.palletsprojects.com/en/stable/intro/) is a templating engine). 
+
+!!! Important "Always write a Jinja expression as a string" 
+    To produce valid YAML, you must write your Jinja expression as a valid string.
+    A very common way to do so in YAML, is to put it between double quotes (there are others).
+
+    **Jinja always produces its result in the form of a string.**
+    Then YAMLpp will interpret it: as a string (in this case) or as something else
+    such as a number, a sequence or a mapping, if applicable.
+
+Execute the file:
+```sh
+yamlpp hello.ypp
+```
+
+The result is:
+
+```yaml
+result: Hello World
+```
+
+
+
+
 
 ## 📘 Example: Generation of several YAML files from a template
 

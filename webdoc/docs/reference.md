@@ -94,7 +94,24 @@ They "run, transform the tree and disappear".
 
 Each construct is defined below with its purpose and an example.
 
-### `.context`
+### Printing
+
+#### `.print`
+**Definition**: Printing a line to the console.
+
+!!! Note "Output to stderr"
+    It goes to the stderr file, to keep it distinct from the output,
+    in case the output (YAML) is sent to the console.
+
+**Example**:
+
+```yaml
+.print "Hello World"
+```
+
+### Variables
+
+#### `.context`
 **Definition**: A mapping that defines a local scope of variables.
 
 You can define a `.context` block at any node of the tree.
@@ -116,9 +133,35 @@ message: "{{ greeting }}, {{ name }}!"
 message: "Hello, Alice!"
 ```
 
+#### `.define`
+**Definition**: A mapping that adds variables to the current scope.
+
+You can define a `.define` block at any node of the tree.
+
+!!! Note "Does not change the scope"
+    This contruct does not change the **scope**. It complements the existing one.
+
+    Here are two use cases:
+      1. Complementing a current scope within the same YAMLpp file.
+      2. Complementing the scope of the parent file, when an external file is loaded.
 
 
-### `.do`
+**Example**:
+```yaml
+.define:
+  greeting: "Hello"
+  name: "Alice"
+
+message: "{{ greeting }}, {{ name }}!"
+```
+**Output**:
+```yaml
+message: "Hello, Alice!"
+```
+
+### Control structures
+
+#### `.do`
 **Definition**: Execute a sequence of node creations, in order. 
 
 In principle, it returns a list, unless:
@@ -145,9 +188,24 @@ However, if `.do` precedes a map, it will process and return it.
 - step: "Finalize"
 ```
 
+#### `.if`
+**Definition**: Create a YAML node, according to condition, with then and else.  
+**Example**:
+```yaml
+.if:
+  .cond: "{{ value > 10 }}"
+  .then:
+    result: "Large"
+  .else:
+    result: "Small"
+```
 
+If `value = 12` →  
+```yaml
+result: "Large"
+```
 
-### `.foreach`
+#### `.foreach`
 **Definition**: Iterates over values with a loop body. 
 If you iterate over a sequence, you will **always** get a sequence (even if empty or with length of 1).
 
@@ -172,7 +230,7 @@ However, if the expression results in a map, `.foreach` just returns the map.
 
 
 
-### `.switch`
+#### `.switch`
 **Definition**: Branch to create a different YAML node, based on an expression and cases.  
 **Example**:
 ```yaml
@@ -193,25 +251,11 @@ meaning: "Go"
 
 
 
-### `.if`
-**Definition**: Create a YAML node, according to condition, with then and else.  
-**Example**:
-```yaml
-.if:
-  .cond: "{{ value > 10 }}"
-  .then:
-    result: "Large"
-  .else:
-    result: "Small"
-```
-If `value = 12` →  
-```yaml
-result: "Large"
-```
+
+### File Management
 
 
-
-### `.load`
+#### `.load`
 **Definition**: Insert and preprocesses another YAMLpp (or YAML) file, at this place in the tree.  
 **Example**:
 ```yaml
@@ -238,79 +282,7 @@ Complete form:
   load function (by name).
 
 
-
-
-
-
-
-
-
-### `.function`
-**Definition**: Define a reusable function with arguments and a body. Arguments are positional.
-
-**Caution**: These functions are not available "as-is" inside of Jinja expressions.
-
-**Example**:
-```yaml
-.function:
-  .name: "greet"
-  .args: ["name"]
-  .do:
-    - message: "Hello {{ name }}!"
-```
-
-
-
-### `.call`
-**Definition**: Invoke a previously defined function with arguments.  
-**Example**:
-```yaml
-.call:
-  .name: "greet"
-  .args: ["Alice"]
-```
-**Output**:
-```yaml
-message: "Hello Alice!"
-```
-
-### `.import`
-**Definition**: Import a Python module, exposing functions and filters to the Jinja expressions.
-
-!!! Note "Delegation to Python"
-    In YAMLpp / Protein pipelines, **any complex logic that operates on a single mapping** (dictionary)
-    should be implemented as a **function** in Python, inside a module — not inside the YAMLpp code.
-
-    YAMLpp should remain declarative; Python is the better place for computation.
-
-
-**Example**:
-```yaml
-.import: "module.py"
-```
-
-```python
-"""
-A sample module
-"""
-
-from yamlpp import ModuleEnvironment
-
-def define_env(env: ModuleEnvironment):
-    @env.export
-    def greet(name: str) -> str:
-        return f"Hello {name}"
-    
-    @env.filter
-    def shout(value: str) -> str:
-        return f"{value.upper()}!!!"
-    
-    env.variables["app_name"] = "YAMLpp"
-```
-
-This makes variables and filters from `module.py` available in Jinja2 expressions.
-
-### `.export`
+#### `.export`
 **Definition**: Export the current portion of the tree into an external file. The tree is
 normalized, in the sense that
 
@@ -394,7 +366,80 @@ YAMLpp constructs are expanded into YAML, before being exported.
 None (the tree is exported to the external file)
 
 
-## Loading from SQL tables
+
+
+### Programmability
+
+#### `.import`
+**Definition**: Import a Python module, exposing functions and filters to the Jinja expressions.
+
+!!! Note "Delegation to Python"
+    In YAMLpp / Protein pipelines, **any complex logic that operates on a single mapping** (dictionary)
+    should be implemented as a **function** in Python, inside a module — not inside the YAMLpp code.
+
+    YAMLpp should remain declarative; Python is the better place for computation.
+
+
+**Example**:
+```yaml
+.import: "module.py"
+```
+
+```python
+"""
+A sample module
+"""
+
+from yamlpp import ModuleEnvironment
+
+def define_env(env: ModuleEnvironment):
+    @env.export
+    def greet(name: str) -> str:
+        return f"Hello {name}"
+    
+    @env.filter
+    def shout(value: str) -> str:
+        return f"{value.upper()}!!!"
+    
+    env.variables["app_name"] = "YAMLpp"
+```
+
+This makes variables and filters from `module.py` available in Jinja2 expressions.
+
+
+
+#### `.function`
+**Definition**: Define a reusable function with arguments and a body. Arguments are positional.
+
+**Caution**: These functions are not available "as-is" inside of Jinja expressions.
+
+**Example**:
+```yaml
+.function:
+  .name: "greet"
+  .args: ["name"]
+  .do:
+    - message: "Hello {{ name }}!"
+```
+
+
+
+#### `.call`
+**Definition**: Invoke a previously defined function with arguments.  
+**Example**:
+```yaml
+.call:
+  .name: "greet"
+  .args: ["Alice"]
+```
+**Output**:
+```yaml
+message: "Hello Alice!"
+```
+
+
+
+### Loading from SQL tables
 
 It can be useful to load values from an SQL table.
 YAMLpp uses SQLAlchemy as the underlying tool.
@@ -403,7 +448,7 @@ Below is a clean, minimal, **reference‑style** documentation block for the thr
 
 
 
-### `.def_sql`
+#### `.def_sql`
 
 **Purpose:**  
 Declare and register an SQLAlchemy engine under a symbolic name.
@@ -434,7 +479,7 @@ def_sql:
 
 
 
-### `.exec_sql`
+#### `.exec_sql`
 
 **Purpose:**  
 Execute an SQL query on a previously declared engine.  
@@ -479,7 +524,7 @@ exec_sql:
 
 
 
-### `.load_sql`
+#### `.load_sql`
 
 **Purpose:**  
 Execute an SQL query and return the resulting rows as a YAML sequence of mappings.
@@ -513,6 +558,92 @@ A YAML sequence of mapping nodes, one per row.
   name: Bob
   age: 41
 ```
+
+
+### Buffer generation
+
+These instructs are used to create text-based output files.
+
+They are especially suited for formats (such as HTML) that do not require indentation.
+
+!!! Warning "Do not use to produce structured outputs"
+    For formats such as YAML, JSON, dotenv, etc., use instead the `.export` construct.
+
+
+#### `.open_buffer`
+
+**Definition**: Declare and initialize a named text buffer.  
+A buffer is a logical container that will later receive text fragments and be saved to a file.
+
+**Fields**:
+
+| Field        | Required | Description |
+|--------------|----------|-------------|
+| `.name`      | yes      | Identifier of the buffer. Must be a valid buffer name. |
+| `.language`  | no       | Indicative language tag (informational only). |
+| `.init`      | no       | Initial text placed in the buffer. |
+| `.indent`    | no       | Base indentation width (in spaces). Default: `4`. |
+
+**Example**:
+```yaml
+.open_buffer:
+  .name: "main"
+  .language: "python"
+  .init: "# Generated file"
+  .indent: 2
+```
+
+
+
+#### `.write_buffer`
+
+**Definition**: Append text to an existing buffer.  
+
+The `.text` field is evaluated (unless wrapped in `%raw` / `%end_raw`).
+
+**Fields**:
+
+| Field       | Required | Description |
+|-------------|----------|-------------|
+| `.name`     | yes      | Identifier of the buffer to write into. |
+| `.text`     | no       | Text to append (evaluated). Default: empty string. |
+| `.indent`   | no       | Relative indentation adjustment for this fragment (in units, not spaces). <br>Default: `0`. |
+
+**Additional Information**:
+
+By default the text is always left-aligned to the previous line; this is generally what you want.
+
+If needed, use an `.indent` number (positive or negative number of indentations) to recalibrate where
+your line should be left-aligned.
+
+**Example**:
+```yaml
+.write_buffer:
+  .name: "main"
+  .indent: 1
+  .text: "print('Hello')"
+```
+
+
+
+#### `.save_buffer`
+
+**Definition**: Write the contents of a buffer to a file.
+
+**Fields**:
+
+| Field        | Required | Description |
+|--------------|----------|-------------|
+| `.name`      | yes      | Identifier of the buffer to save. |
+| `.filename`  | yes      | Output filename, relative to the source directory. |
+
+**Example**:
+```yaml
+.save_buffer:
+  .name: "main"
+  .filename: "output.py"
+```
+
 
 
 
