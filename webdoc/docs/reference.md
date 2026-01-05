@@ -456,11 +456,22 @@ The frame is destroyed immediately after the function returns.
 Because of this model, an inner function can be called *from within* its enclosing function,  
 but it is **never visible to the caller** outside that function’s lexical scope.
 
+Calls can be done by position (sequence) or by name (mapping), but not a mix of the two.
+
 **Example**:
 ```yaml
 .call:
   .name: "greet"
   .args: ["Alice"]
+```
+
+or 
+
+```yaml
+.call:
+  .name: "greet"
+  .args:
+    name: "Alice"
 ```
 
 **Output**:

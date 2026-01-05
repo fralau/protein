@@ -822,17 +822,22 @@ class Interpreter:
         Create a function
         A function is a block with a name, arguments and a sequence, which returns a subtree.
 
-        This captures the context
+        This captures the context.
 
         .function:
             .name: "",
-            .args": [...],
+            .args": [...], # sequence 
             .do": [...]
         """
         name = entry['.name']
-        # print("Function created with its name!", name)
-        # self.stack[name] = entry.value
+        # checks:
+        entry['.do']
+        formal_args = entry['.args']
+        if not isinstance(formal_args, list):
+            raise YAMLppError(entry, Error.TYPE, 
+                              f"Function {name}'s formal args must be a sequence (is {type(formal_args).__name__})")
         function_context = {"function": entry.value, "capture": self.stack.capture}
+        # insert on stack
         self.stack[name] = function_context
         return None
 
@@ -861,19 +866,25 @@ class Interpreter:
         formal_args = function['.args']
         args = entry['.args']
         # evaluate each argument:
-        if not isinstance(args, list):
-            raise TypeError(f"The argument provided '{args}' is not a list but a { type(args).__name__}")
+        
         # do not evaluate at this stage.
-        assert isinstance(args, list)
-        # print("args:", args)
-        if len(args) != len(formal_args):
-            raise YAMLppError(entry, 
-                              Error.ARGUMENTS,
-                              f"No of arguments not matching, expected {len(formal_args)}, found {len(args)}")
-        assigned_args = dict(zip(formal_args, args))
-        # print("Assigned:", assigned_args)
-        # print("Args:", assigned_args)
-               
+        if isinstance(args, list):
+            # print("args:", args)
+            if len(args) != len(formal_args):
+                raise YAMLppError(entry, 
+                                Error.ARGUMENTS,
+                                f"No of arguments not matching, expected {len(formal_args)}, found {len(args)}")
+            assigned_args = dict(zip(formal_args, args))
+            # print("Assigned:", assigned_args)
+        elif isinstance(args, dict):
+            if set(args) != set(formal_args):
+                diff = set(args) ^ set(formal_args)
+                raise YAMLppError(entry,
+                                  Error.ARGUMENTS,
+                                  f"Arguments not matching, differences: {diff}")
+            assigned_args = args
+        else:
+            raise TypeError(f"The argument provided '{args}' is not a map/sequence but a { type(args).__name__}")       
 
         # create the new block and copy the arguments as context
         actions = function['.do']

@@ -8,6 +8,8 @@ def test_basic_add_function():
     """
     Ensure that a simple `.function` returning a scalar mapping
     evaluates correctly across multiple `.call` invocations.
+
+    Invocations are by position or by value
     """
     yaml_text = """
 test:
@@ -25,13 +27,32 @@ test:
     - .call:
         .name: add
         .args: [3, 5]
+
+    - .call: # by name
+        .name: add
+        .args: 
+            a: 5
+            b: 4
+
+    - .call:
+        .name: add
+        .args: 
+            a: 5
+            b: 5
+    - .call: # also in different order
+        .name: add
+        .args: 
+            b: 5
+            a: 6
 """
     yaml, result = yamlpp_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
 
     assert result.test[0].value == 7
     assert result.test[1].value == 8
-
+    assert result.test[2].value == 9
+    assert result.test[3].value == 10
+    assert result.test[4].value == 11
 
 def test_mapping_return_function():
     """
@@ -61,7 +82,9 @@ test:
 
     - .call:
         .name: create
-        .args: ['prod', 3]
+        .args:
+            env: prod
+            max_retries: 3
 """
     yaml, result = yamlpp_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
