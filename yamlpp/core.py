@@ -166,15 +166,15 @@ class Interpreter:
         self._dirty = True
         self._functions = functions
         self._filters = filters
-        if not source_dir:
-            # working directory
-            self._source_dir = os.getcwd()
+        
+        # working directory
+        self._source_dir = source_dir or os.getcwd()
 
         if filename:
             self.load(filename)
         else:
             # create a Jinja environment nothing in it
-            self._source_dir = source_dir
+            # self._source_dir = source_dir
             self._reset_environment()
         
     @property
@@ -913,7 +913,8 @@ class Interpreter:
         # return r
 
         # At this point we need to create a new interpreter, with that context
-        i = Interpreter()
+        i = Interpreter(source_dir=self.source_dir)
+        assert i.source_dir, "The source dir was not correctly assigned"
         i.load_tree(new_block)
         i.stack.push(capture)
         return i.render_tree()
@@ -1041,11 +1042,15 @@ class Interpreter:
         name = self.evaluate_expression(entry['.name'])
         check_name(name)
         filename = self.evaluate_expression(entry['.filename'])
+        if not self.source_dir:
+            raise YAMLppError(entry.value, Error.FILE, "Cannot save, this interpreter has no default dir.")
         full_filename = get_full_filename(self.source_dir, filename)
+        assert full_filename
         # print("Full filename:", full_filename)
         # Create and print the output:
         buffer = self.stack[name]
         indent_width = buffer['indent']
+        assert indent_width
         file_output = render_buffer(buffer["content"], indent_width)
         with open(full_filename, 'w') as f:
             f.write(file_output)
