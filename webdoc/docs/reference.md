@@ -381,7 +381,7 @@ None (the tree is exported to the external file)
 
 ### Programmability
 
-#### `.import`
+#### `.import_module`
 **Definition**: Import a Python module, exposing functions and filters to the Jinja expressions.
 
 !!! Note "Delegation to Python"
@@ -393,7 +393,7 @@ None (the tree is exported to the external file)
 
 **Example**:
 ```yaml
-.import: "module.py"
+.import_module: "module.py"
 ```
 
 ```python

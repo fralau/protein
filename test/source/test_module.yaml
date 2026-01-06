@@ -4,7 +4,7 @@
   name: Joe
   sentence: "Hello world!"
 
-.import: "{{module}}"
+.import_module: "{{module}}"
 
 data:
   #function contained in the module

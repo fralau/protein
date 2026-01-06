@@ -25,6 +25,7 @@ from .util import load_yaml, validate_node, parse_yaml, safe_path, print_yaml
 from .util import check_name, get_full_filename
 from .util import to_yaml, serialize, get_format, deserialize, normalize, collapse_seq, collapse_maps
 from .util import CommentedMap, CommentedSeq # Patched versions (DO NOT CHANGE THIS!)
+from .util import extract_identifier
 from .buffer import render_buffer, Indentation
 from .error import YAMLppError, Error, JinjaExpressionError, DispatcherError
 from .import_modules import get_exports
@@ -43,6 +44,8 @@ BlockNode = Dict[str, Any]
 ListNode  = List[Any]
 Node = Union[BlockNode, ListNode, str, int, float, bool, None] 
 KeyOrIndexentry = Tuple[Union[str, int], Node]
+
+ALLOWED_NODE_TYPES = dict, list, CommentedMap, CommentedSeq
 
 # Global functions for Jinja2
 
@@ -142,7 +145,7 @@ class Interpreter:
     #  - Register it in this list
     CONSTRUCTS = ('.context','.define',
                   '.do', '.foreach', '.switch', '.if', 
-                  '.load', '.import', 
+                  '.load', '.import_module', 
                   '.function', '.call',  
                   '.def_sql', '.exec_sql', '.load_sql',
                   '.export', '.open_buffer', '.write_buffer', '.save_buffer',
@@ -151,7 +154,7 @@ class Interpreter:
 
 
     def __init__(self, filename:str=None, source_dir:str=None,
-                 functions:dict={}, filters:dict={}):
+                 functions:dict={}, filters:dict={}, render:bool=True):
         """
         Initialize with the YAMLpp source code
 
@@ -161,6 +164,7 @@ class Interpreter:
         source_dir: source directory (if different from the filename's directory)
         functions: a dictionary of functions that will update the GLOBALS.
         filters: a dictionary of filters that will update the filters
+        render: render the file
         """
         self._tree = None
         self._dirty = True
@@ -169,10 +173,10 @@ class Interpreter:
         self._source_file = filename
         
         # working directory
-        self._source_dir = source_dir or os.getcwd()
+        self._source_dir = source_dir
 
         if filename:
-            self.load(filename)
+            self.load(filename, render=render)
         else:
             # create a Jinja environment nothing in it
             # self._source_dir = source_dir
@@ -214,8 +218,13 @@ class Interpreter:
         """
         self.dirty()
         if not is_text:
-            self._source_dir = os.path.dirname(source)
+            if not self._source_dir:
+                # the name of source, or (last resort) the current dir
+                self._source_dir = os.path.dirname(source)
+        if not self._source_dir:
+            self._source_dir = os.getcwd()
         self._yamlpp, self._initial_tree = load_yaml(source, is_text)
+
         if validate:
             validate_node(self._initial_tree)
 
@@ -244,6 +253,8 @@ class Interpreter:
         "Load a tree into the environment"
         self._initial_tree = tree
         self._reset_environment()
+        if not self._source_dir:
+            self._source_dir = os.getcwd()
 
 
     def _reset_environment(self):
@@ -354,8 +365,9 @@ class Interpreter:
         """
         if self.is_dirty:
             assert len(self.initial_tree) > 0, "Empty yamlpp!"
+            # print("Initial tree:", self.initial_tree)
             self._tree = self.process_node(self.initial_tree)
-            assert isinstance(self._tree, (dict, list)) or self._tree is None
+            assert isinstance(self._tree, ALLOWED_NODE_TYPES) or self._tree is None, f"Tree is {type(self._tree).__name__}"
             # assert self._tree is not None, "Empty tree!"
             self._dirty = False
         return self._tree
@@ -739,6 +751,7 @@ class Interpreter:
     # ---------------------
     # File management
     # ---------------------
+
     def handle_load(self, entry:MappingEntry) -> Node:
         """
         Load an external file (YAML or other format)
@@ -814,6 +827,78 @@ class Interpreter:
     # ---------------------
 
     def handle_import(self, entry:MappingEntry) -> None:
+        """
+        Import a YAMLpp module (it is YAML, by convention), so that
+        its content can be accessed from the Jinja interpreter.
+
+        The module is fully separate (separation of concerns).
+        NOTE: .import does not load anything on the tree.
+
+        If no items are exposed to the caller's interpreter, 
+        then the module's name is exposed,
+        and the items within it must be accessed with the dot notation
+        (`module.foo`). 
+
+        short form:
+        -----------
+        .import path/to/my/module.ypp
+
+        The module is executed with the name;
+        and its content is accessible on the stack under the name `module`.
+
+        long form:
+        -----------
+        .import:
+            .filename: path/to/my/module.ypp
+            .as: my_module # alias
+            .exposes: [..., ...] # list of items exposed
+        """
+
+        if isinstance(entry.value, str):
+            # simple form
+            filename = self.evaluate_expression(entry.value)
+            module_name = extract_identifier(filename)
+            exposes_names = []
+        else:
+            # long form
+            filename = self.evaluate_expression(entry['.filename'])
+            module_name = self.evaluate_expression(entry.get('.as')) or extract_identifier(filename)
+            exposes_names = entry.get('.exposes', []) 
+            if not isinstance(exposes_names,list):
+                self.raise_error(entry, Error.ARGUMENTS, f".exposes expects a list (is {type(exposes_names).__name__})")
+
+        
+        # load the file
+        try:
+            full_filename = safe_path(self.source_dir, filename)
+        except FileNotFoundError as e:
+            self.raise_error(entry, Error.FILE, e)  
+        
+        # At this point we need to create a new interpreter, with that context
+        i = Interpreter(filename=full_filename, source_dir=self.source_dir, render=False)
+    
+        if not exposes_names:
+            # no names exposed:
+            self.stack[module_name] = i.tree
+            return None
+        for item_name in exposes_names:
+            # register each exposed item under its name
+            try:
+                item = i.stack[item_name]
+            except KeyError:
+                # print(f"Stack (for error on item '{item_name}'):", i.stack)
+                self.raise_error(entry, Error.ARGUMENTS, 
+                                 f"Cannot import item '{item_name}' from module '{module_name}' ('{filename}')")
+            # insert into the stack
+            self.stack[item_name] = item
+        return None
+        
+
+
+                
+
+
+    def handle_import_module(self, entry:MappingEntry) -> None:
         """
         Import a Python module, with variables (function) and filters.
         The import is scoped.

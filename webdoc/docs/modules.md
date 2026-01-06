@@ -81,7 +81,7 @@ Finally, we should update the YAMLpp file, by importing the module
 (here, before the `data` map):
 
 ```yaml
-.import greet.py
+.import_module greet.py
 ```
 
 
@@ -123,7 +123,7 @@ To do that, we need a ** module**, written in Python, and import it before using
 (here, before the `.context` construct):
 
 ```yaml
-.import: "my_module.py
+.import_module: "my_module.py
 ```
 
 Here is the Python module:

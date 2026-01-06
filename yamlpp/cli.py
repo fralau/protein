@@ -117,7 +117,7 @@ def main():
         variables = parse_vars(args.set)
         
         # load YAMLpp
-        interpreter = Interpreter(args.file)
+        interpreter = Interpreter(filename=args.file)
 
         # update the environment with the passed variables
         interpreter.set_context(variables)

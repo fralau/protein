@@ -4,6 +4,7 @@ Common utilities
 
 import os
 from pathlib import Path
+import string
 import ast
 from typing import Any
 import collections
@@ -514,5 +515,46 @@ def check_name(name:str) -> None:
     # pass
 
 
+
+
+def extract_identifier(path):
+    """
+    Extrait un identifiant Python valide à partir d'un chemin.
+    Transformations minimales :
+      - remplace les espaces par '_'
+      - remplace les caractères non autorisés par '_'
+      - préfixe '_' si le nom commence par un chiffre
+    Lève ValueError si le résultat n'est toujours pas un identifiant valide.
+    """
+    p = Path(path)
+    name = p.stem
+
+    # Remplacer explicitement les espaces
+    name = name.replace(" ", "_")
+
+    # Si déjà valide, on retourne tel quel
+    if name.isidentifier():
+        return name
+
+    allowed = string.ascii_letters + string.digits + "_"
+
+    # Remplacement minimal : tout ce qui n'est pas autorisé → '_'
+    transformed = "".join(c if c in allowed else "_" for c in name)
+
+    # Si ça commence par un chiffre → préfixer '_'
+    if transformed and transformed[0].isdigit():
+        transformed = "_" + transformed
+
+    # Nettoyage minimal : éviter les underscores vides
+    transformed = transformed.strip("_")
+
+    # Vérification finale
+    if transformed and transformed.isidentifier():
+        return transformed
+
+    raise ValueError(
+        f"Impossible de dériver un identifiant Python valide à partir de '{name}'. "
+        f"Résultat obtenu : '{transformed}'"
+    )
 
 
