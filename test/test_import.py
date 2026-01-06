@@ -25,15 +25,16 @@ def write(tmp_path, name, content):
 # ---------------------------------------------------------------------------
 
 def test_import_short_form(tmp_path):
-    write(tmp_path, "mod.ypp", "foo: 123")
+    MODULE_NAME = "mod5"
+    write(tmp_path, f"{MODULE_NAME}.ypp", "foo: 123")
 
     i = Interpreter(source_dir=str(tmp_path))
-    entry = MappingEntry(".import", "mod.ypp")
+    entry = MappingEntry(".import", f"{MODULE_NAME}.ypp")
 
     i.handle_import(entry)
 
-    assert "mod" in i.stack
-    assert i.stack["mod"]["foo"] == 123
+    assert MODULE_NAME in i.stack
+    assert i.stack[MODULE_NAME]["foo"] == 123
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +74,7 @@ def test_import_exposes(tmp_path):
     i = Interpreter(filename=tmp_path/SOURCE_FILE, source_dir=str(tmp_path), render=True)
     print("Initial tree:", i.initial_tree)
     i.render_tree()
+
     entry = MappingEntry(".import", {
         ".filename": "mod.ypp",
         ".exposes": ["foo"],
@@ -142,12 +144,18 @@ def test_import_missing_exposed_item(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_import_namespace_isolation(tmp_path):
+    """
+    When you import a module, its internal names must NOT leak 
+    into the caller’s namespace. 
+    Instead, the module must appear as a single namespaced object.
+    """
     write(tmp_path, "mod.ypp", "foo: 1")
 
     i = Interpreter(source_dir=str(tmp_path))
     entry = MappingEntry(".import", "mod.ypp")
 
     i.handle_import(entry)
+    print(i.stack)
 
     assert "foo" not in i.stack
     assert "mod" in i.stack

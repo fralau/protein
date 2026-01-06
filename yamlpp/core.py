@@ -154,7 +154,8 @@ class Interpreter:
 
 
     def __init__(self, filename:str=None, source_dir:str=None,
-                 functions:dict={}, filters:dict={}, render:bool=True):
+                 functions:dict=None, filters:dict=None, render:bool=True,
+                 is_module:bool=False):
         """
         Initialize with the YAMLpp source code
 
@@ -164,13 +165,16 @@ class Interpreter:
         source_dir: source directory (if different from the filename's directory)
         functions: a dictionary of functions that will update the GLOBALS.
         filters: a dictionary of filters that will update the filters
-        render: render the file
+        render: render the file (default: True)
+        is_module: if True, the functions objects are kept in the tree  (default: False)
         """
         self._tree = None
         self._dirty = True
-        self._functions = functions
-        self._filters = filters
+        self._functions = functions if functions is not None else {}
+        self._filters = filters if filters is not None else {}
+
         self._source_file = filename
+        self._is_module = is_module
         
         # working directory
         self._source_dir = source_dir
@@ -258,19 +262,26 @@ class Interpreter:
 
 
     def _reset_environment(self):
-        "Reset the Jinja environment"
-        # create the interpretation environment
-        # variables not found will raise an error
-        # NOTE: globals and filters are NO LONGER pure dictionaries, but a stack of dictionaries
-        self._jinja_env = env = Environment(undefined=StrictUndefined)
-        env.globals = Stack(env.globals)
-        assert isinstance(env.globals, Stack)
-        env.globals.push(GLOBAL_CONTEXT)
+        env = Environment(undefined=StrictUndefined)
+
+        # Copy Jinja built-ins into a fresh dict
+        base_globals = dict(env.globals)
+        base_filters = dict(env.filters)
+
+        # Wrap the copies in your Stack
+        env.globals = Stack(base_globals)
+        env.filters = Stack(base_filters)
+
+        # Push your own global context (copy!)
+        env.globals.push(GLOBAL_CONTEXT.copy())
+
+        # Add interpreter-specific functions/filters
         env.globals.update(self._functions)
-        env.globals['__SOURCE_FILE__'] = self.source_file # the source file
-        env.filters = Stack(env.filters)
+        env.globals['__SOURCE_FILE__'] = self.source_file
         env.filters.update(self._filters)
-        assert isinstance(env.filters, Stack)
+
+        self._jinja_env = env
+
 
     # -------------------------
     # Properties
@@ -616,7 +627,11 @@ class Interpreter:
         # print("New scope:\n", new_scope)
         self.stack.update(new_scope)
         self.jinja_env.filters.push({})
-        return None
+        if self._is_module:
+            # in a module, you return the result of the evaluation
+            return result
+        else:
+            return None
     
     def handle_define(self, entry:MappingEntry) -> None:
         """
@@ -634,7 +649,11 @@ class Interpreter:
         block = self._get_scope(result)
         # print("New scope:\n", new_scope)
         self.stack.update(block)
-        return None
+        if self._is_module:
+            # in a module, you return the result of the evaluation
+            return result
+        else:
+            return None
 
 
     # ---------------------
@@ -875,16 +894,19 @@ class Interpreter:
             self.raise_error(entry, Error.FILE, e)  
         
         # At this point we need to create a new interpreter, with that context
-        i = Interpreter(filename=full_filename, source_dir=self.source_dir, render=False)
+        i = Interpreter(filename=full_filename, source_dir=self.source_dir, 
+                        render=True, is_module=True)
+        # module is set to True, so now the functions are stored as plain objects
     
         if not exposes_names:
             # no names exposed:
             self.stack[module_name] = i.tree
             return None
+        print("Full tree:", i.tree)
         for item_name in exposes_names:
             # register each exposed item under its name
             try:
-                item = i.stack[item_name]
+                item = i.tree[item_name]
             except KeyError:
                 # print(f"Stack (for error on item '{item_name}'):", i.stack)
                 self.raise_error(entry, Error.ARGUMENTS, 
@@ -935,10 +957,14 @@ class Interpreter:
         if not isinstance(formal_args, list):
             self.raise_error(entry, Error.TYPE, 
                               f"Function {name}'s formal args must be a sequence (is {type(formal_args).__name__})")
-        function_context = {"function": entry.value, "capture": self.stack.capture}
+        function_context = {".function": entry.value, ".capture": self.stack.capture}
         # insert on stack
         self.stack[name] = function_context
-        return None
+        if self._is_module:
+            # The function must also be put into the tree, so that it can be exported
+            return {name: function_context}
+        else:
+            return None
 
         
         
@@ -958,8 +984,8 @@ class Interpreter:
         except KeyError:
             self.raise_error(entry, Error.KEY, f"Function '{name}' not found!")
         
-        function = function_context['function']
-        capture  = function_context['capture']
+        function = function_context['.function']
+        capture  = function_context['.capture']
         
         # assign the arguments
         formal_args = function['.args']
