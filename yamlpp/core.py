@@ -555,6 +555,9 @@ class Interpreter:
         try:
             r = template.render()
         except Exception as e:
+            print("Error evaluating expression:", expr, file=sys.stderr)
+            for i, frame in enumerate(self.stack):
+                print(f"  {i}: {frame}", file=sys.stderr)
             raise JinjaExpressionError(expr, e)
         # print("Evaluate", expr, "->", r, ">", type(r).__name__)
         try:
@@ -568,7 +571,7 @@ class Interpreter:
         Raises a YAMLpp error.
         Extracts line number and line text directly from the node.
         Automatically adds the last loaded filename to the message
-        """
+        """ 
         raise YAMLppError(node, err_type, message, self.stack['__SOURCE_FILE__'])
 
     # -------------------------
@@ -960,6 +963,7 @@ class Interpreter:
         function_context = {".function": entry.value, ".capture": self.stack.capture}
         # insert on stack
         self.stack[name] = function_context
+        print(f"Saved context for function '{name}':", function_context, file=sys.stderr)
         if self._is_module:
             # The function must also be put into the tree, so that it can be exported
             return {name: function_context}

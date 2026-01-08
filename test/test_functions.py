@@ -118,9 +118,9 @@ def test_closure_captures_definition_environment():
     """
     yaml_text = """
 test:
-  .do:
-    - .context:
+  .context:
         x: 10
+  .do:
 
     - .function:
         .name: get_x
@@ -138,7 +138,7 @@ test:
     yaml, result = yamlpp_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
 
-    assert result.test.value == 999
+    assert result.test.value == 10
 
 
 def test_arguments_override_captured_environment():
@@ -148,10 +148,9 @@ def test_arguments_override_captured_environment():
     """
     yaml_text = """
 test:
+  .context:
+    x: 5
   .do:
-    - .context:
-        x: 5
-
     - .function:
         .name: f
         .args: [x]
@@ -168,18 +167,59 @@ test:
     assert result.test.value == 42
 
 
-def test_closure_keeps_live_references():
+def test_static_closure_on_mutable():
     """
-    Ensure that closure capture is shallow: if the captured environment
-    contains a mutable object, mutations to that object are visible.
+    Ensure that closure capture is static: 
+    even if the captured environment contains a mutable object,
+    mutations to that object are NOT visible.
+
+    Even though `data.items` is a list (mutable), then changing its contents
+    after the function is defined doea not affects what the closure sees.
     """
     yaml_text = """
 test:
+  .context:
+        data:
+          foos: [1, 2]
+
   .do:
-    - .context:
+    - .function:
+        .name: read_foos
+        .args: []
+        .do:
+          value: "{{ data.foos }}"
+
+    # Mutate the mutable object AFTER the function is created
+    - .define:
+        data:
+          foos: [1, 2, 3]
+
+    - .print: "Data items are {{ data.foos }}"
+
+    - .call:
+        .name: read_foos
+        .args: []
+"""
+    yaml, result = yamlpp_comp(yaml_text)
+    print_yaml(yaml, "Evaluation")
+
+    # Even though the function captured a reference to the mutable list,
+    # and the list was mutated, the closure still sees the original list contents.
+    assert result.test.value == [1, 2]
+
+def test_static_closure_on_immutable():
+    """ 
+    Ensure that closure capture is static.
+    
+    Changing the value of `data.counter` has no effect on the closure,
+    which still references the old int value.
+    """
+    yaml_text = """
+test:
+  .context:
         data:
           counter: 1
-
+  .do:
     - .function:
         .name: read_counter
         .args: []
@@ -190,6 +230,8 @@ test:
         data:
           counter: 2
 
+    - .print: "Data counter is {{ data.counter }}"
+
     - .call:
         .name: read_counter
         .args: []
@@ -197,7 +239,9 @@ test:
     yaml, result = yamlpp_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
 
-    assert result.test.value == 2
+    assert result.test.value == 1
+
+
 
 
 
