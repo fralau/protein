@@ -59,7 +59,9 @@ class Stack(MutableMapping):
         """
         Get the top frame of the stack
         """
-        return self._stack[-1]
+        r = self._stack[-1]
+        print("Stack.top() ->", r)
+        return r
 
     def _merged(self) -> Dict[str, Any]:
         """

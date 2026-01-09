@@ -95,7 +95,7 @@ However the `.foreach` loop naturally collects of a **sequence of mappings of ca
 
 **Input**
 ```yaml
-.context:
+.frame:
   users:
     - { id: 1, name: joe }
     - { id: 2, name: jill }
@@ -134,7 +134,7 @@ set the `collect_maps` attribute to `false`.
 
 
 ```yaml
-.context:
+.frame:
   users:
     - { id: 1, name: joe }
     - { id: 2, name: jill }
@@ -181,7 +181,7 @@ Everything inside this block is passed through unchanged, allowing YAMLpp to out
 ### Example: YAMLpp‑idiomatic GitHub workflow generator
 
 ```yaml
-.context:
+.frame:
   workflow_name: Example Workflow
 
 
@@ -202,7 +202,7 @@ jobs:
                 {% endraw %}
 ```
 
-- `.context` appears first and contains only data, not logic.
+- `.frame` appears first and contains only data, not logic.
 - The output file (here `github_workflow`) is a **single mapping key** with a `.template` body.
 - The template uses YAMLpp interpolation (`{{ workflow_name }}`) where appropriate.
 - GitHub’s own `${{ … }}` syntax is preserved via `{% raw %}`.
@@ -215,7 +215,7 @@ If you want, I can show the idiomatic pattern for generating **multiple workflow
 ### YAMLpp‑idiomatic multi‑workflow generator
 
 ```yaml
-.context:
+.frame:
   workflows:
     - { name: build,   version: 0.0.1 }
     - { name: release, version: 0.0.2 }
@@ -243,7 +243,7 @@ If you want, I can show the idiomatic pattern for generating **multiple workflow
 
 
 
-- **`.context` first** — pure data, no logic.
+- **`.frame` first** — pure data, no logic.
 - **Top‑level directory key** (`.github/workflows:`) — YAMLpp treats it as a mapping.
 - **`.foreach`** produces a *sequence of 1‑key maps*, which collapses into a mapping of workflow files.
 - **Each iteration produces a file** named `"{{ w.name }}.yml"`.

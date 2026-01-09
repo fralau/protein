@@ -18,7 +18,7 @@ definitions:
   mapping:
     type: object
     properties:
-      .context:
+      .frame:
         $ref: "#/definitions/mapping"
 
       .do:

@@ -1,5 +1,5 @@
 # This is my comment
-.context:
+.frame:
   env: "test"
   host: "localhost"
   users: [alice, bob, charlie, michael]

@@ -43,7 +43,7 @@ def test_keyring():
 
 
     yaml = """
-.context:
+.frame:
     service: %s
     username: %s
 
@@ -64,7 +64,7 @@ def test_keyring_error():
     "Test the keyring buit-in function, with error"
 
     # YAML contains a wrong name
-    yaml = """.context:
+    yaml = """.frame:
     service: %s
     username: %s
 

@@ -19,7 +19,7 @@ Here is a simple example:
 
 **YAMLpp**:
 ```yaml
-.context:
+.frame:
   name: "Alice"
 
 message: "Hello, {{ name }}!"
@@ -33,7 +33,7 @@ message: "Hello, Alice!"
 ### General principles
 
 The language is composed of **constructs**, which are denoted keys starting with a dot (`.`), such
-as `.context`, `.if`, `.switch`, etc.
+as `.frame`, `.if`, `.switch`, etc.
 
 The YAMLpp preprocessor uses these constructs modify the tree, and the constructs disappear.
 
@@ -91,18 +91,18 @@ print(i.yaml)
 
 ## 🔧 YAMLpp Constructs (Quick Reference)
 
-| Construct   | Purpose | Minimal Example |
-|-------------|---------|-----------------|
-| **`.context`** | Define local variables valid for siblings and descendants. | .context:<br>  name: "Alice"<br>message: "Hello {{ name }}" |
-| **`.do`** | Execute a sequence or map of instructions. | .do:<br>  - step: "Init"<br>  - step: "Run" |
-| **`.foreach`** | Iterate over values with a loop body. | .context:<br>  items: [1,2]<br>.foreach:<br>  .values: [x, items]<br>  .do:<br>    - val: "{{ x }}" |
-| **`.switch`** | Branch to a different node based on an expression and cases. | .switch:<br>  .expr: "{{ color }}"<br>  .cases:<br>    red: {msg: "Stop"}<br>  .default: {msg: "?"} |
-| **`.if`** | Conditional node creation with `then` and `else`. | .if:<br>  .cond: "{{ x>0 }}"<br>  .then: {res: "Pos"}<br>  .else: {res: "Neg"} |
-| **`.load`** | Insert and preprocess another YAMLpp (or YAML) file. | .import_module: "other.yaml" |
-| **`.function`** | Define a reusable block with arguments and a body. | .function:<br>  .name: "greet"<br>  .args: ["n"]<br>  .do:<br>    - msg: "Hi {{ n }}" |
-| **`.call`** | Invoke a previously defined function with arguments. | .call:<br>  .name: "greet"<br>  .args: ["Bob"] |
-| **`.import_module`** | Import a Python module exposing functions, filters, and variables. | .module: "module.py" |
-| **`.export`** | Export a portion of the tree into an external file. | .export:<br>  .filename: "out.yaml"<br>  .do:<br>    - foo: "bar" |
+| Construct            | Purpose                                                            | Minimal Example                                                                                     |
+| -------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| **`.frame`**         | Define local variables valid for siblings and descendants.         | .frame:<br>  name: "Alice"<br>message: "Hello {{ name }}"                                           |
+| **`.do`**            | Execute a sequence or map of instructions.                         | .do:<br>  - step: "Init"<br>  - step: "Run"                                                         |
+| **`.foreach`**       | Iterate over values with a loop body.                              | .frame:<br>  items: [1,2]<br>.foreach:<br>  .values: [x, items]<br>  .do:<br>    - val: "{{ x }}"   |
+| **`.switch`**        | Branch to a different node based on an expression and cases.       | .switch:<br>  .expr: "{{ color }}"<br>  .cases:<br>    red: {msg: "Stop"}<br>  .default: {msg: "?"} |
+| **`.if`**            | Conditional node creation with `then` and `else`.                  | .if:<br>  .cond: "{{ x>0 }}"<br>  .then: {res: "Pos"}<br>  .else: {res: "Neg"}                      |
+| **`.load`**          | Insert and preprocess another YAMLpp (or YAML) file.               | .import_module: "other.yaml"                                                                        |
+| **`.function`**      | Define a reusable block with arguments and a body.                 | .function:<br>  .name: "greet"<br>  .args: ["n"]<br>  .do:<br>    - msg: "Hi {{ n }}"               |
+| **`.call`**          | Invoke a previously defined function with arguments.               | .call:<br>  .name: "greet"<br>  .args: ["Bob"]                                                      |
+| **`.import_module`** | Import a Python module exposing functions, filters, and variables. | .module: "module.py"                                                                                |
+| **`.export`**        | Export a portion of the tree into an external file.                | .export:<br>  .filename: "out.yaml"<br>  .do:<br>    - foo: "bar"                                   |
 
 
 

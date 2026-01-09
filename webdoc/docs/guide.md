@@ -128,7 +128,7 @@ Use `.foreach` to loop through each environment.
 .foreach:
   .values: [env, envs]
   .do:
-    - .context:
+    - .frame:
         cfg: "{{ envs[env] }}"
       .export:
         .filename: "deployments/{{ env }}.yaml"
@@ -200,7 +200,7 @@ spec:
 
 ### Why This Matters
 - One source of truth → fewer mistakes.  
-- Easy scaling → add new environments by editing `.context`.  
+- Easy scaling → add new environments by editing `.frame`.  
 - Reusable → same template works for Kubernetes, Docker Compose, or CI pipelines.  
 
 
@@ -311,7 +311,7 @@ This tutorial explains the exact sequence:
     .name: db
     .url: "sqlite:///foo.sqlite"
                        
-.context:
+.frame:
     servers:
         .load_sql:
             .engine: db

@@ -10,7 +10,7 @@ from yamlpp.util import print_yaml
 def test_single_workflow_with_raw():
     "Test the {% raw %}...{% endraw %} idiom"
     yaml_source = """
-.context:
+.frame:
   workflow_name: Example Workflow
 
 
@@ -48,7 +48,7 @@ jobs:
 def test_multiple_workflows_with_foreach_and_raw():
     "Test the {% raw %}...{% endraw %} idiom within a .foreach"
     yaml_source = """
-.context:
+.frame:
   workflows:
     - { name: build,   version: 0.0.1 }
     - { name: release, version: 0.0.2 }

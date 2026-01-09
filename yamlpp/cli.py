@@ -120,9 +120,9 @@ def main():
         interpreter = Interpreter(filename=args.file)
 
         # update the environment with the passed variables
-        interpreter.set_context(variables)
+        interpreter.set_frame(variables)
         if len(variables):
-            output = serialize(interpreter.context)
+            output = serialize(interpreter.frame)
             err_console.print(format_code(output, title='Initial context'))
         
         # Show raw

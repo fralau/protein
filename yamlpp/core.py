@@ -144,7 +144,7 @@ class Interpreter:
     # When you create a new construct:
     #  - Create the handler
     #  - Register it in this list
-    CONSTRUCTS = ('.context','.define',
+    CONSTRUCTS = ('.frame','.define',
                   '.do', '.foreach', '.switch', '.if', 
                   '.load', '.import', '.import_module', 
                   '.function', '.call',  
@@ -298,11 +298,11 @@ class Interpreter:
         return self._initial_tree
         
     @property
-    def context(self) -> Node:
-        "Return the top-level .context section or None"
+    def frame(self) -> Node:
+        "Return the top-level .frame section or None"
         # print("INITIAL TREE")
         # print(self.initial_tree)
-        return self.initial_tree.get('.context')
+        return self.initial_tree.get('.frame')
 
     @property
     def yamlpp(self) -> str:
@@ -343,11 +343,11 @@ class Interpreter:
     # -------------------------
     # Preprocessing
     # -------------------------
-    def set_context(self, arguments:dict):
+    def set_frame(self, arguments:dict):
         """
-        Update the first '.context' of the initial tree with a dictionary (key, value pairs).
+        Update the first '.frame' of the initial tree with a dictionary (key, value pairs).
 
-        Literal are turned into objects (strings remain strings).
+        Literals are turned into objects (strings remain strings).
         """
         for key, value in arguments.items():
                 arguments[key] = parse_yaml(value)
@@ -356,15 +356,15 @@ class Interpreter:
         if isinstance(itree, CommentedSeq):
             # Special case: the tree starts with a sequence
             new_start = CommentedMap({
-                '.context': arguments,
+                '.frame': arguments,
                 '.do': itree
             })
             self.initial_tree = new_start
         else:
             # Usual case: a map
-            context = itree.get('.context', CommentedMap())
+            context = itree.get('.frame', CommentedMap())
             context.update(arguments)
-            itree['.context'] = context
+            itree['.frame'] = context
 
     # -------------------------
     # Rendering
@@ -430,8 +430,8 @@ class Interpreter:
             # Dictionary nodes
             # print("Dictionary:", node)
 
-            # Process the .context block, if any (local scope)
-            params_block = node.get(".context")
+            # Process the .frame block, if any (local scope)
+            params_block = node.get(".frame")
             new_context = False
             if params_block:
                 new_context = True
@@ -583,12 +583,12 @@ class Interpreter:
     # -------------------------
         
 
-    def _get_scope(self, params_block: Dict) -> Dict:
+    def _get_frame(self, params_block: Dict) -> Dict:
         """
         Evaluate the values from a (parameters) node,
-        to create a new scope.
+        to create a new frame (or a part of a frame).
         """
-        new_scope: Dict[str, Any] = {}
+        new_frame: Dict[str, Any] = {}
         if params_block is None:
             params_block = {}
         elif isinstance(params_block, dict):
@@ -596,11 +596,11 @@ class Interpreter:
                 # print("Key:", key)
                 assert isinstance(self.stack, Stack), f"the stack is not a Stack but '{type(self.stack).__name__}'"
                 # normalize the result, so that it's properly managed as a variable
-                new_scope[key] = normalize(self.process_node(value))
+                new_frame[key] = normalize(self.process_node(value))
         else:
-            raise ValueError(f"A scope frame must be a dictionary found: {type(params_block).__name__}")
+            raise ValueError(f"A frame must be a dictionary found: {type(params_block).__name__}")
         
-        return new_scope
+        return new_frame
 
 
     # ---------------------
@@ -617,22 +617,22 @@ class Interpreter:
     # Variables
     # ---------------------
 
-    def handle_context(self, entry:MappingEntry) -> None:
+    def handle_frame(self, entry:MappingEntry) -> None:
         """
-        Creates a new context (scope) on the stack, and adds variables.
+        Creates a new frame (scope) on the stack, and adds variables.
 
-        Note: you cannot reuse variables defined in the same .context block.
+        Note: you cannot reuse variables defined in the same .frame block.
 
-        .context:
+        .frame:
             ....
 
         """
-        self.stack.push({}) # create the scope before doing calculations
+        self.stack.push({}) # create the frame before doing calculations
         # print("Value:\n", entry.value)
         result = self.process_node(entry.value)
-        new_scope = self._get_scope(result)
+        new_frame = self._get_frame(result)
         # print("New scope:\n", new_scope)
-        self.stack.update(new_scope)
+        self.stack.update(new_frame)
         self.jinja_env.filters.push({})
         if self._is_module:
             # in a module, you return the result of the evaluation
@@ -647,13 +647,13 @@ class Interpreter:
         Note: you cannot reuse variables defined in the same .export block.
 
         It is useful
-        - when used before the `.context`in an imported file: for exporting variables
+        - when used before the `.frame`in an imported file: for exporting variables
           to the parent context.
-        - after a .context, for defining new variables, without changing scope
+        - after a .frame, for defining new variables, without changing scope
         """# create the scope before doing calculations
         # print("Value:\n", entry.value)
         result = self.process_node(entry.value)
-        block = self._get_scope(result)
+        block = self._get_frame(result)
         # print("New scope:\n", new_scope)
         self.stack.update(block)
         if self._is_module:
@@ -665,7 +665,7 @@ class Interpreter:
     def handle_emit(self, entry:MappingEntry) -> Node:
         """
         Emits the content of the last stack frame
-        (.context + .define/.import blocks),
+        (.frame + .define/.import blocks),
         excluding non-node types.
         """
         frame = self.stack.peek()
@@ -1042,14 +1042,14 @@ class Interpreter:
             new_block = actions.copy()
         if isinstance(new_block, (CommentedSeq, list)):
             # normal list (or even a plain string), you need to create a dictionary
-            new_block = {'.context': assigned_args, '.do': new_block}
+            new_block = {'.frame': assigned_args, '.do': new_block}
         elif isinstance(new_block, str):
             # str
-            new_block = {'.context': assigned_args, '.do': new_block}
+            new_block = {'.frame': assigned_args, '.do': new_block}
         elif isinstance(new_block, (CommentedMap, dict)):
             # a simple dict
-            new_block['.context'] = assigned_args
-            new_block.move_to_end('.context', last=False) # brigng first
+            new_block['.frame'] = assigned_args
+            new_block.move_to_end('.frame', last=False) # brigng first
         else:
             raise TypeError("Invalid .do block")
 

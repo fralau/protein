@@ -20,7 +20,7 @@ Here is a simple example:
 
 **YAMLpp**:
 ```yaml
-.context:
+.frame:
   name: "Alice"
 
 message: "Hello, {{ name }}!"
@@ -34,7 +34,7 @@ message: "Hello, Alice!"
 ### General principles
 
 The language is composed of **constructs**, which are denoted keys starting with a dot (`.`), such
-as `.context`, `.if`, `.switch`, etc.
+as `.frame`, `.if`, `.switch`, etc.
 
 The YAMLpp preprocessor uses these constructs modify the tree, and the constructs disappear.
 

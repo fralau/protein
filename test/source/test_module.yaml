@@ -1,5 +1,5 @@
 # comment
-.context:
+.frame:
   module: module1.py
   name: Joe
   sentence: "Hello world!"

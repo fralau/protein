@@ -98,9 +98,9 @@ def format_error(error):
     if error.validator == "oneOf":
         # Summarize instead of dumping the whole node
         raw = "Value does not match any of the expected node types"
-        if error.context:
+        if error.frame:
             # Collect suberror messages (without values)
-            details = "; ".join(se.message.split(" ")[0] for se in error.context)
+            details = "; ".join(se.message.split(" ")[0] for se in error.frame)
             raw = f"{raw}. Details: {details}"
     elif error.validator == "additionalProperties":
         # Show which property was invalid and what keys are allowed

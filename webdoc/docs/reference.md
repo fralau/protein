@@ -55,6 +55,39 @@ _Terms in the definitions that are defined in this glossary are preceded by an a
 
 - **Module**: An imported piece of Python code (file or package) that provides variables, functions and [filters](https://jinja.palletsprojects.com/en/stable/templates/#filters) to the ➙ Jinja environment.
 
+- **Frame**: a mapping of variables and functions, to be used
+  by YAMLpp when evaluating Jinja expressions.
+
+- **Frame Stack**: the dynamically generated stack of all ➙ frames currently active. The stack is _not_ dependent on the structure of the data tree; it is built by explicit ➙ constructs found on that tree, such as importing a ➙ module, or creating a new ➙ frame.
+In other words, if none of these constructs are found in a
+tree, the frame stack does not change (it always exposes the same
+frame).
+
+- **Variable**: an item stored a frame;
+  it has a name (➙ key) and a ➙ value.
+
+- **(Lexical) Scope**: the filter saying which variables the
+  YAMLpp program currently
+  has access to. The rules for the scope are simple: look for at the variable in the top frame of the stack,
+  and if not found, look for it in
+  the next frame down, and so on, until the bottom the frame stack.
+  The term **lexical** refers to "the rules that decide where a name
+  exists and how it can be accessed".
+
+- **Function**: in YAMLpp's terminology, it is a variable that
+  refers to a sequence of YAMLpp constructs, with specified
+  arguments. 
+
+- **Context**: the projection (snapshot) of the frame stack
+  at a specific moment, showing all variables visible in the
+  current scope. When a ➙ function is created, it also captures its 
+  own ➙ context, so that this function can be called later in
+  a predictable way (with the variables having the exact same meaning
+  they had when the function was declared). A context
+  is static, i.e. a change of a variable's value at a later moment
+  does not change the context as it was captured.
+
+
 
 
 ## General principles
@@ -135,7 +168,7 @@ message: "Hello, Alice!"
 ```
 
 
-#### `.context`
+#### `.frame`
 **Definition**: Creates a new **scope** for variables or functions.
 
 In that new scope, the variables and functions already created
@@ -145,27 +178,27 @@ They do not influence the rest of the tree.
 Once the interpreter will have finished walking that
 part of the tree, the scope will die.
 
-You can define a `.context` block at any node of the tree.
+You can define a `.frame` block at any node of the tree.
 
-You can define variables directly within a `.context` construct,
+You can define variables directly within a `.frame` construct,
 without having to use an additional `.define` construct.
 
 !!! Warning "Scope of the definitions"
     The variables defined here have a **lexical scope**: they are visible to all sibling nodes and their descendants,  
-    but **not** to any part of the tree *above* the `.context` block.
+    but **not** to any part of the tree *above* the `.frame` block.
 
 !!! Note "Technical Note"
-  What the `.context` construct does, under the hood,
-  is that it pushes a new frame on the the lexical stack
+  What the `.frame` construct does, under the hood,
+  is that it pushes a new frame on the the frame stack
   (which contains the variables and functions).
-  When the sequence in which the `.context` construct
+  When the sequence in which the `.frame` construct
   ends, the frame is popped.
 
 
 
 **Example**:
 ```yaml
-.context:
+.frame:
   greeting: "Hello"
   name: "Alice"
 
@@ -236,7 +269,7 @@ However, if the expression results in a map, `.foreach` just returns the map.
 
 **Example**:
 ```yaml
-.context:
+.frame:
   items: [1, 2, 3]
 
 .foreach:
@@ -729,7 +762,7 @@ yamlpp test1.yaml --set env=prod count=5
 Supposing that your YAMLpp file contained:
 
 ```yaml
-.context
+.frame
   env: test
   count: 3
   foo: barbaz
@@ -737,7 +770,7 @@ Supposing that your YAMLpp file contained:
 
 It will contain:
 ```yaml
-.context
+.frame
   env: prod
   count: 5
   foo: barbaz
@@ -746,7 +779,7 @@ It will contain:
 If the tree started with a sequence, a top level map will be created:
 
 ```yaml
-.context
+.frame
   env: prod
   count: 5
 .do

@@ -118,7 +118,7 @@ def test_closure_captures_definition_environment():
     """
     yaml_text = """
 test:
-  .context:
+  .frame:
         x: 10
   .do:
 
@@ -148,7 +148,7 @@ def test_arguments_override_captured_environment():
     """
     yaml_text = """
 test:
-  .context:
+  .frame:
     x: 5
   .do:
     - .function:
@@ -178,7 +178,7 @@ def test_static_closure_on_mutable():
     """
     yaml_text = """
 test:
-  .context:
+  .frame:
         data:
           foos: [1, 2]
 
@@ -216,7 +216,7 @@ def test_static_closure_on_immutable():
     """
     yaml_text = """
 test:
-  .context:
+  .frame:
         data:
           counter: 1
   .do:
@@ -267,7 +267,7 @@ def test_nested_function_invisible():
     yaml_text = """
 test:
   .do:
-    - .context:
+    - .frame:
         x: 1
 
     - .function:
