@@ -26,7 +26,11 @@ def write(tmp_path, name, content):
 
 def test_import_short_form(tmp_path):
     MODULE_NAME = "mod5"
-    write(tmp_path, f"{MODULE_NAME}.ypp", "foo: 123")
+    content="""
+.define:
+  foo: 123
+"""
+    write(tmp_path, f"{MODULE_NAME}.ypp", content)
 
     i = Interpreter(source_dir=str(tmp_path))
     entry = MappingEntry(".import", f"{MODULE_NAME}.ypp")
@@ -42,8 +46,11 @@ def test_import_short_form(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_import_long_form_alias(tmp_path):
-    write(tmp_path, "mod.ypp", "foo: 123")
-
+    content="""
+.define:
+  foo: 123
+"""
+    write(tmp_path, "mod.ypp", content)
     i = Interpreter(source_dir=str(tmp_path))
     entry = MappingEntry(".import", {
         ".filename": "mod.ypp",
@@ -64,7 +71,7 @@ SOURCE_FILE = "mod.ypp"
 
 def test_import_exposes(tmp_path):
     VALUES = """
-.context:
+.define:
     foo: 1
     bar: 2
 """
@@ -86,7 +93,7 @@ def test_import_exposes(tmp_path):
 
     assert "foo" in i.stack
     assert i.stack["foo"] == 1
-    assert "bar" not in i.stack
+    assert "bar" in i.stack
 
 
 # ---------------------------------------------------------------------------
@@ -125,8 +132,11 @@ def test_import_missing_file(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_import_missing_exposed_item(tmp_path):
-    write(tmp_path, "mod.ypp", "foo: 1")
-
+    content="""
+.define:
+  foo: 123
+"""
+    write(tmp_path, "mod.ypp", content)
     i = Interpreter(source_dir=str(tmp_path))
     entry = MappingEntry(".import", {
         ".filename": "mod.ypp",
@@ -149,8 +159,11 @@ def test_import_namespace_isolation(tmp_path):
     into the caller’s namespace. 
     Instead, the module must appear as a single namespaced object.
     """
-    write(tmp_path, "mod.ypp", "foo: 1")
-
+    content="""
+.define:
+  foo: 123
+"""
+    write(tmp_path, "mod.ypp", content)
     i = Interpreter(source_dir=str(tmp_path))
     entry = MappingEntry(".import", "mod.ypp")
 
@@ -159,7 +172,7 @@ def test_import_namespace_isolation(tmp_path):
 
     assert "foo" not in i.stack
     assert "mod" in i.stack
-    assert i.stack["mod"]["foo"] == 1
+    assert i.stack["mod"]["foo"] == 123
 
 
 # ---------------------------------------------------------------------------
@@ -171,23 +184,28 @@ def test_nested_imports(tmp_path):
     A imports B, B exposes foo.
     A should see foo in its stack.
     """
-
-    write(tmp_path, "b.ypp", "foo: 42")
+    content="""
+.define:
+  foo: 42
+"""
+    write(tmp_path, "b.ypp", content)
 
     write(tmp_path, "a.ypp", """
 .import:
   .filename: b.ypp
   .exposes: [foo]
+.print: "foo: {{ foo }}"
 """)
 
     i = Interpreter(source_dir=str(tmp_path))
     entry = MappingEntry(".import", "a.ypp")
 
     i.handle_import(entry)
+    print(i.stack)
 
     # A exposes foo from B
-    assert "foo" in i.stack
-    assert i.stack["foo"] == 42
+    assert "foo" not in i.stack
+    assert i.stack['a']["foo"] == 42
 
 
 # ---------------------------------------------------------------------------
@@ -200,8 +218,11 @@ def test_chained_imports_with_alias(tmp_path):
     B imports C and exposes x.
     A should see b.x.
     """
-
-    write(tmp_path, "c.ypp", "x: 7")
+    content="""
+.define:
+  x: 7
+"""
+    write(tmp_path, "c.ypp", content)
 
     write(tmp_path, "b.ypp", """
 .import:
@@ -220,5 +241,5 @@ def test_chained_imports_with_alias(tmp_path):
 
     i.handle_import(entry)
 
-    assert "b" in i.stack
-    assert i.stack["b"]["x"] == 7
+    assert "a" in i.stack
+    assert i.stack["a"]["b"]["x"] == 7

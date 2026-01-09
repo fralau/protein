@@ -54,6 +54,12 @@ class Stack(MutableMapping):
             self._dirty = True
         else:
             raise RuntimeError("Cannot pop the base stack")
+        
+    def top(self) -> Dict[str, Any]:
+        """
+        Get the top frame of the stack
+        """
+        return self._stack[-1]
 
     def _merged(self) -> Dict[str, Any]:
         """

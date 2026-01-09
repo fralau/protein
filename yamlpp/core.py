@@ -46,6 +46,7 @@ Node = Union[BlockNode, ListNode, str, int, float, bool, None]
 KeyOrIndexentry = Tuple[Union[str, int], Node]
 
 ALLOWED_NODE_TYPES = dict, list, CommentedMap, CommentedSeq
+ALL_NODE_TYPES = ALLOWED_NODE_TYPES + (str, int, float, bool, type(None))   
 
 # Global functions for Jinja2
 
@@ -145,7 +146,7 @@ class Interpreter:
     #  - Register it in this list
     CONSTRUCTS = ('.context','.define',
                   '.do', '.foreach', '.switch', '.if', 
-                  '.load', '.import_module', 
+                  '.load', '.import', '.import_module', 
                   '.function', '.call',  
                   '.def_sql', '.exec_sql', '.load_sql',
                   '.export', '.open_buffer', '.write_buffer', '.save_buffer',
@@ -279,6 +280,9 @@ class Interpreter:
         env.globals.update(self._functions)
         env.globals['__SOURCE_FILE__'] = self.source_file
         env.filters.update(self._filters)
+
+        env.globals.push({})  # initial empty frame for the stack
+        env.filters.push({})  # initial empty frame for the filters
 
         self._jinja_env = env
 
@@ -658,6 +662,18 @@ class Interpreter:
         else:
             return None
 
+    def handle_emit(self, entry:MappingEntry) -> Node:
+        """
+        Emits the content of the last stack frame
+        (.context + .define/.import blocks),
+        excluding non-node types.
+        """
+        frame = self.stack.peek()
+        result = CommentedMap()
+        for key in frame:
+            if isinstance(frame[key], ALL_NODE_TYPES):
+                result[key] = frame[key]
+        return result
 
     # ---------------------
     # Control structures
@@ -897,19 +913,22 @@ class Interpreter:
             self.raise_error(entry, Error.FILE, e)  
         
         # At this point we need to create a new interpreter, with that context
+        # print(f"Importing module '{module_name}' from file '{filename}' (full path: '{full_filename}')")    
         i = Interpreter(filename=full_filename, source_dir=self.source_dir, 
                         render=True, is_module=True)
         # module is set to True, so now the functions are stored as plain objects
     
+        last_frame = i.stack.top()
         if not exposes_names:
             # no names exposed:
-            self.stack[module_name] = i.tree
+            self.stack[module_name] = last_frame
             return None
-        print("Full tree:", i.tree)
+        # print("Full tree:", i.tree)
         for item_name in exposes_names:
             # register each exposed item under its name
             try:
-                item = i.tree[item_name]
+                # print(f"Importing item '{item_name}' from module '{module_name}'")  
+                item = last_frame[item_name]
             except KeyError:
                 # print(f"Stack (for error on item '{item_name}'):", i.stack)
                 self.raise_error(entry, Error.ARGUMENTS, 

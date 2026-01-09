@@ -54,12 +54,12 @@ result: Hello World
 
 Create a file `hello.ypp`:
 ```yaml  
-.context:
+.define:
   message: Hello World
 result: "{{ message }}"
 ```
 
-The `.context` construct allows you to define variables, which you can later call.
+The `.define` construct allows you to define variables, which you can later call.
 
 To call a variable always use a Jinja expression, within double curly quotes
 ([Jinja](https://jinja.palletsprojects.com/en/stable/intro/) is a templating engine). 
@@ -103,11 +103,11 @@ YAMLpp lets you declare **one template** and generate all variants.
 
 ### Step‑by‑Step Guide
 
-#### Step 1 — Define Context
-Set environment‑specific parameters in a `.context` block.
+#### Step 1 — Define Variables
+Set environment‑specific parameters in a `.define` block.
 
 ```yaml
-.context:
+.define:
   envs:
     dev:
       replicas: 1
@@ -191,7 +191,7 @@ spec:
 
 ### Key Programming Patterns
 
-- **Variables with `.context`** → keep environment configs centralized.  
+- **Variables with `.define`** → keep environment configs centralized.  
 - **Loops with `.foreach`** → generate multiple files from one template.  
 - **Exports with `.export`** → write each variant to disk.  
 - **Jinja expressions** → interpolate values cleanly.  
@@ -219,7 +219,7 @@ To simplify make the code more abstract, we use a function.
 ```yaml
 # docker-compose.yamlpp
 
-.context:
+.define:
   maintainer: "Laurent"
   version: "1.0"
   services:
@@ -286,7 +286,7 @@ services:
 
 ### Why This Is Sensible
 - The **function** defines the service pattern once.  
-- `.context` holds the sequence of service definitions.  
+- `.define` declares the sequence of variables needed.  
 - `.foreach` iterates over them, and `.call` expands each into a full service block.  
 - We get both **abstraction** (via the function) and **compactness** (via the sequence).  
 
@@ -296,11 +296,11 @@ services:
 Suppose we have an SQL database, with a table `servers`:
 
 
-| id | name   | ip          |
-|----|--------|-------------|
-| 1  | alpha  | 10.0.0.1    |
-| 2  | beta   | 10.0.0.2    |
-| 3  | gamma  | 10.0.0.3    |
+| id  | name  | ip       |
+| --- | ----- | -------- |
+| 1   | alpha | 10.0.0.1 |
+| 2   | beta  | 10.0.0.2 |
+| 3   | gamma | 10.0.0.3 |
 
 We wish to use it to 
 
@@ -353,7 +353,7 @@ You now have a usable SQL engine called `db` stored in the interpreter’s engin
 ### 2. Load SQL data into the context
 
 ```
-.context:
+.define:
     servers:
         .load_sql:
             .engine: db
@@ -434,7 +434,7 @@ Interpolation replaces `{{ server.name }}` and `{{ server.ip }}` with actual val
 This YAMLpp program performs a complete data‑driven transformation:
 
 1. Defines an SQL engine (`db`).
-2. Queries the database and stores results in `.context.servers`.
+2. Queries the database and stores results in `servers`.
 3. Iterates over each server row.
 4. Interpolates fields into a generated configuration structure.
 

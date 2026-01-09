@@ -111,15 +111,57 @@ Each construct is defined below with its purpose and an example.
 
 ### Variables
 
+#### `.define`
+**Definition**: A mapping that adds variables to the *current* scope.
+
+You can define a `.define` block at any node of the tree.
+
+This is the default command you use to define variables.
+
+
+
+**Example**:
+```yaml
+.define:
+  greeting: "Hello"
+  name: "Alice"
+
+message: "{{ greeting }}, {{ name }}!"
+```
+
+**Output**:
+```yaml
+message: "Hello, Alice!"
+```
+
 
 #### `.context`
-**Definition**: A mapping that defines a local scope of variables or functions.
+**Definition**: Creates a new **scope** for variables or functions.
+
+In that new scope, the variables and functions already created
+are still visible. However, the new ones that you create
+will remain **local** to that part of the tree. 
+They do not influence the rest of the tree.
+Once the interpreter will have finished walking that
+part of the tree, the scope will die.
 
 You can define a `.context` block at any node of the tree.
+
+You can define variables directly within a `.context` construct,
+without having to use an additional `.define` construct.
 
 !!! Warning "Scope of the definitions"
     The variables defined here have a **lexical scope**: they are visible to all sibling nodes and their descendants,  
     but **not** to any part of the tree *above* the `.context` block.
+
+!!! Note "Technical Note"
+  What the `.context` construct does, under the hood,
+  is that it pushes a new frame on the the lexical stack
+  (which contains the variables and functions).
+  When the sequence in which the `.context` construct
+  ends, the frame is popped.
+
+
 
 **Example**:
 ```yaml
@@ -137,32 +179,6 @@ message: "Hello, Alice!"
 
 
 
-#### `.define`
-**Definition**: A mapping that adds variables to the *current* scope.
-
-You can define a `.define` block at any node of the tree.
-
-!!! Note "Does not change the scope"
-    This construct does **not** introduce a new scope.  
-    It augments the existing one.
-
-    Typical use cases:
-      1. Extending the current scope within the same YAMLpp file.  
-      2. Extending the scope of a parent file when an external file is loaded.
-
-**Example**:
-```yaml
-.define:
-  greeting: "Hello"
-  name: "Alice"
-
-message: "{{ greeting }}, {{ name }}!"
-```
-
-**Output**:
-```yaml
-message: "Hello, Alice!"
-```
 
 
 
@@ -321,11 +337,11 @@ YAMLpp constructs are expanded into YAML, before being exported.
 
 === "JSON, TOML and others"
 
-    | Format   | Library / Function                  | Implicit Argument(tree)                  | Optional Arguments                                                                 | Documentation |
-    |----------|-------------------------------------|------------------------------------------|------------------------------------------------------------------------------------|---------------|
-    | **json** | `json.dumps(obj, **kwargs)`         | `obj` (serializable Python object)       | `skipkeys`, `ensure_ascii`, `check_circular`, `allow_nan`, `indent`, `separators`, `default`, `sort_keys`, `cls` | [Python json docs](https://docs.python.org/3/library/json.html#json.dumps) |
-    | **toml** | `tomlkit.dumps(data)`               | `data` (dict or TOMLDocument)            | None — intentionally minimal, style‑preserving only                                | [tomlkit docs](https://tomlkit.readthedocs.io/en/latest/api/#tomlkit.dumps) |
-    | **python** | `repr`                            | expression                               | —                                                                                  | [Python docs](https://docs.python.org/3/library/functions.html#repr) |
+    | Format     | Library / Function          | Implicit Argument(tree)            | Optional Arguments                                                                                               | Documentation                                                               |
+    | ---------- | --------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+    | **json**   | `json.dumps(obj, **kwargs)` | `obj` (serializable Python object) | `skipkeys`, `ensure_ascii`, `check_circular`, `allow_nan`, `indent`, `separators`, `default`, `sort_keys`, `cls` | [Python json docs](https://docs.python.org/3/library/json.html#json.dumps)  |
+    | **toml**   | `tomlkit.dumps(data)`       | `data` (dict or TOMLDocument)      | None — intentionally minimal, style‑preserving only                                                              | [tomlkit docs](https://tomlkit.readthedocs.io/en/latest/api/#tomlkit.dumps) |
+    | **python** | `repr`                      | expression                         | —                                                                                                                | [Python docs](https://docs.python.org/3/library/functions.html#repr)        |
 
 
 === "YAML"
@@ -344,19 +360,19 @@ YAMLpp constructs are expanded into YAML, before being exported.
 
     This is the table of arguments for the `yaml` format:
 
-    | Argument             | Description                                                                 | Values                          | Default Value (ruamel.yaml) | Output                 |
-    |----------------------|-------------------------------------------------------------------------|------------------------------------------|-----------------------------|-------------------------------------------|
-    | `indent`             | Spaces for nested mappings and sequences                                | Integer ≥ 1                              | 2                           | Controls block indentation depth          |
-    | `offset`             | Spaces between sequence dash (`-`) and item content                     | Integer ≥ 0                              | 2                           | Affects alignment of list items           |
-    | `explicit_start`     | Emit `---` at start of document                                         | True / False                             | False                       | Adds YAML document start marker           |
-    | `explicit_end`       | Emit `...` at end of document                                           | True / False                             | False                       | Adds YAML document end marker             |
-    | `allow_unicode`      | Permit non‑ASCII characters                                             | True / False                             | True                        | Controls escaping of Unicode              |
-    | `canonical`          | Emit canonical form (explicit scalars, sorted keys)                     | True / False                             | False                       | Produces strict, verbose YAML             |
-    | `width`              | Preferred line width before wrapping                                    | Integer ≥ 0                              | 80                          | Controls line breaks in scalars           |
-    | `preserve_quotes`    | Keep original quoting style when round‑tripping                         | True / False                             | False                       | Preserves `'` vs `"` in output            |
-    | `typ`                | Loader/dumper type                                                      | "rt", "safe", "base", "unsafe"           | "rt"                        | Determines round‑trip vs safe mode        |
-    | `pure`               | Use pure Python implementation                                          | True / False                             | None (ruamel decides)       | Affects performance, not output           |
-    | `version`            | YAML specification version                                              | Tuple (major, minor)                     | None                        | Adds `%YAML x.y` directive                |
+    | Argument          | Description                                         | Values                         | Default Value (ruamel.yaml) | Output                             |
+    | ----------------- | --------------------------------------------------- | ------------------------------ | --------------------------- | ---------------------------------- |
+    | `indent`          | Spaces for nested mappings and sequences            | Integer ≥ 1                    | 2                           | Controls block indentation depth   |
+    | `offset`          | Spaces between sequence dash (`-`) and item content | Integer ≥ 0                    | 2                           | Affects alignment of list items    |
+    | `explicit_start`  | Emit `---` at start of document                     | True / False                   | False                       | Adds YAML document start marker    |
+    | `explicit_end`    | Emit `...` at end of document                       | True / False                   | False                       | Adds YAML document end marker      |
+    | `allow_unicode`   | Permit non‑ASCII characters                         | True / False                   | True                        | Controls escaping of Unicode       |
+    | `canonical`       | Emit canonical form (explicit scalars, sorted keys) | True / False                   | False                       | Produces strict, verbose YAML      |
+    | `width`           | Preferred line width before wrapping                | Integer ≥ 0                    | 80                          | Controls line breaks in scalars    |
+    | `preserve_quotes` | Keep original quoting style when round‑tripping     | True / False                   | False                       | Preserves `'` vs `"` in output     |
+    | `typ`             | Loader/dumper type                                  | "rt", "safe", "base", "unsafe" | "rt"                        | Determines round‑trip vs safe mode |
+    | `pure`            | Use pure Python implementation                      | True / False                   | None (ruamel decides)       | Affects performance, not output    |
+    | `version`         | YAML specification version                          | Tuple (major, minor)           | None                        | Adds `%YAML x.y` directive         |
 
 
     !!! Warning "Default values"
@@ -621,12 +637,12 @@ A buffer is a logical container that will later receive text fragments and be sa
 
 **Fields**:
 
-| Field        | Required | Description |
-|--------------|----------|-------------|
-| `.name`      | yes      | Identifier of the buffer. Must be a valid buffer name. |
-| `.language`  | no       | Indicative language tag (informational only). |
-| `.init`      | no       | Initial text placed in the buffer. |
-| `.indent`    | no       | Base indentation width (in spaces). Default: `4`. |
+| Field       | Required | Description                                            |
+| ----------- | -------- | ------------------------------------------------------ |
+| `.name`     | yes      | Identifier of the buffer. Must be a valid buffer name. |
+| `.language` | no       | Indicative language tag (informational only).          |
+| `.init`     | no       | Initial text placed in the buffer.                     |
+| `.indent`   | no       | Base indentation width (in spaces). Default: `4`.      |
 
 **Example**:
 ```yaml
@@ -647,11 +663,11 @@ The `.text` field is evaluated (unless wrapped in `%raw` / `%end_raw`).
 
 **Fields**:
 
-| Field       | Required | Description |
-|-------------|----------|-------------|
-| `.name`     | yes      | Identifier of the buffer to write into. |
-| `.text`     | no       | Text to append (evaluated). Default: empty string. |
-| `.indent`   | no       | Relative indentation adjustment for this fragment (in units, not spaces). <br>Default: `0`. |
+| Field     | Required | Description                                                                                 |
+| --------- | -------- | ------------------------------------------------------------------------------------------- |
+| `.name`   | yes      | Identifier of the buffer to write into.                                                     |
+| `.text`   | no       | Text to append (evaluated). Default: empty string.                                          |
+| `.indent` | no       | Relative indentation adjustment for this fragment (in units, not spaces). <br>Default: `0`. |
 
 **Additional Information**:
 
@@ -676,10 +692,10 @@ your line should be left-aligned.
 
 **Fields**:
 
-| Field        | Required | Description |
-|--------------|----------|-------------|
-| `.name`      | yes      | Identifier of the buffer to save. |
-| `.filename`  | yes      | Output filename, relative to the source directory. |
+| Field       | Required | Description                                        |
+| ----------- | -------- | -------------------------------------------------- |
+| `.name`     | yes      | Identifier of the buffer to save.                  |
+| `.filename` | yes      | Output filename, relative to the source directory. |
 
 **Example**:
 ```yaml
