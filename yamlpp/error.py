@@ -130,6 +130,7 @@ class Error(str, Enum):
     SQL = "SQLError"
     VALUE = "ValueError"
     TYPE = "TypeError"
+    EXIT = "ProgramExit"
     OTHER = "OtherError"
     # add more categories as needed
 
@@ -162,7 +163,7 @@ class YAMLppError(GeneralYAMLppError):
 # --------------------------
 
 class DispatcherError(Exception):
-    "Error raised by the despatcher"
+    "Error raised by the despatcher (used?)"
     def __init__(self, err_type: Error, message: str):
         self.err_type = err_type
         self.message = str(message)
@@ -183,3 +184,23 @@ class JinjaExpressionError(Exception):
 
     def __str__(self):
         return (f"Expression '{self.expression}'\n{self.err_type}:{self.error_text}")
+    
+
+class YAMLppExitError(Exception):
+    "An error that requires exiting the program with a specific code (for the OS)"
+    def __init__(self, node, message: str, code: int | None = 0, filename:str=''):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.filename = filename    
+        if isinstance(node, (CommentedMap, CommentedSeq)):
+            line_no = get_line_number(node) 
+        else:
+            line_no = 0
+        self.line_no = line_no
+
+    def __str__(self):
+        message = f"[ExitError] Line {self.line_no}: {self.message} (exit code: {self.code})"
+        if self.filename:
+            message = f"{self.filename}: {message}"
+        return message

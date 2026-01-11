@@ -318,6 +318,23 @@ If `color = "green"` →
 meaning: "Go"
 ```
 
+#### `.exit`
+**Definition**: Terminate the execution, with a message and an optional exit code (default: 0).
+It raises the exception YAMLppExitError; the CLI terminates with the exit code.
+
+**Form**:
+```yaml
+.exit:
+  .code: <integer>        # optional
+  .message: <string>      # required
+```
+
+**Example**:
+```yaml
+.exit:
+  .code: 2
+  .message: "Invalid configuration"
+```
 
 
 

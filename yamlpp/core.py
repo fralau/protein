@@ -27,7 +27,7 @@ from .util import to_yaml, serialize, get_format, deserialize, normalize, collap
 from .util import CommentedMap, CommentedSeq # Patched versions (DO NOT CHANGE THIS!)
 from .util import extract_identifier
 from .buffer import render_buffer, Indentation
-from .error import YAMLppError, Error, JinjaExpressionError, DispatcherError
+from .error import YAMLppError, Error, JinjaExpressionError, YAMLppExitError
 from .import_modules import get_exports
 
 
@@ -145,7 +145,7 @@ class Interpreter:
     #  - Create the handler
     #  - Register it in this list
     CONSTRUCTS = ('.local','.define',
-                  '.do', '.foreach', '.switch', '.if', 
+                  '.do', '.foreach', '.switch', '.if', '.exit',
                   '.load', '.import', '.import_module', 
                   '.function', '.call',  
                   '.def_sql', '.exec_sql', '.load_sql',
@@ -524,6 +524,9 @@ class Interpreter:
                 self.raise_error(e.node, e.err_type, err_intro + e.message)
             else:
                 self.raise_error(entry.value, e.err_type, err_intro + e.message)
+        except YAMLppExitError:
+            # propagate exit errors without modification
+            raise
         except ValueError as e:
             self.raise_error(entry.value, Error.VALUE, e)
         except IndexError as e:
@@ -576,7 +579,8 @@ class Interpreter:
         Extracts line number and line text directly from the node.
         Automatically adds the last loaded filename to the message
         """ 
-        raise YAMLppError(node, err_type, message, self.stack['__SOURCE_FILE__'])
+        raise YAMLppError(node, err_type, message, 
+                          filename=self.stack['__SOURCE_FILE__'])
 
     # -------------------------
     # Specific handlers (after dispatcher)
@@ -785,6 +789,22 @@ class Interpreter:
         # print("handle_if:", r)
         return r
 
+
+    def handle_exit(self, entry:MappingEntry) -> None:
+        """
+        Exit the program with a given exit code.
+
+        .exit:
+            .code: integer expression (default: 0)
+            .message: message to print before exiting
+        """
+        exit_code = entry.get('.code', 0)
+        if not isinstance(exit_code, int):
+            self.raise_error(entry.value, Error.TYPE,
+                f"Exit code must be an integer (is {type(exit_code).__name__})")
+        message = entry.get('.message', strict=True)
+        raise YAMLppExitError(entry.value, message, exit_code, 
+                              filename=self.stack['__SOURCE_FILE__'])
 
     # ---------------------
     # File management

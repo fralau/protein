@@ -15,6 +15,7 @@ from rich.syntax import Syntax
 
 from .core import Interpreter
 from .util import serialize
+from .error import YAMLppExitError, YAMLppError
 
 # -------------------------
 # General parameters
@@ -130,8 +131,17 @@ def main():
             err_console.print(format_code(interpreter.yamlpp, title="Original YAML", color="magenta"))
         # then render:
         interpreter.render_tree()
+    except YAMLppError as e:
+        err_console.print(f"[bold red]YAMLpp Error:[/bold red] {e}")
+        if args.debug:
+            traceback.print_exc()   # print on stderr
+        raise SystemExit(1)
+    except YAMLppExitError as e:
+        if e.message:
+            err_console.print(f"[bold red]Program Exit:[/bold red] {e.message}")
+        raise SystemExit(e.code)
     except Exception as e:
-        err_console.print(f"[bold red]Error:[/bold red] {e}")
+        err_console.print(f"[bold red]Other error:[/bold red] {e}")
         if args.debug:
             traceback.print_exc()   # print on stderr
         raise SystemExit(1)
