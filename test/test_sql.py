@@ -17,10 +17,10 @@ from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from ruamel.yaml.comments import CommentedSeq
 
-from yamlpp import Interpreter, yamlpp_comp
-from yamlpp.util import print_yaml
-from yamlpp.sql import sql_text, sql_create_engine, osquery
-from yamlpp.error import YAMLppError
+from protein import Interpreter, protein_comp
+from protein.util import print_yaml
+from protein.sql import sql_text, sql_create_engine, osquery
+from protein.error import YAMLppError
 
 def inspect_db(engine: Engine):
     "Inspect a db and return info"
@@ -320,4 +320,4 @@ def test_osquery_not_installed():
     "osquery not installed (high-level test)"
     with patch("subprocess.run", side_effect=FileNotFoundError):
         with pytest.raises(YAMLppError, match="osqueryi command not found"):
-            yaml, tree = yamlpp_comp(OS_QUERY_PROGRAM)
+            yaml, tree = protein_comp(OS_QUERY_PROGRAM)

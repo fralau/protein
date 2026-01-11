@@ -2,7 +2,7 @@
 Test the Stack class
 """
 import pytest
-from yamlpp.stack import Stack
+from protein.stack import Stack
 
 
 def test_multiple_pushes_and_overrides():

@@ -3,9 +3,9 @@ Test the globals
 """
 import pytest
 
-from yamlpp import Interpreter
-from yamlpp.util import print_yaml
-from yamlpp.error import YAMLppError
+from protein import Interpreter
+from protein.util import print_yaml
+from protein.error import YAMLppError
 
 USERNAME = 'db_user'
 SERVICE = 'my_server'

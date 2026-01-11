@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from yamlpp import Interpreter
-from yamlpp.error import YAMLppError, YAMLValidationError
-from yamlpp.util import print_yaml, deserialize, FILE_FORMATS
+from protein import Interpreter
+from protein.error import YAMLppError, YAMLValidationError
+from protein.util import print_yaml, deserialize, FILE_FORMATS
 
 # this formats are not teste because they are not general enough
 EXCLUDED_FORMATS = ['env']

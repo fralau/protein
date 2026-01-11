@@ -61,7 +61,7 @@ Otherwise, you can also load directly variables (and functions) into the `env.va
 A sample module
 """
 
-from yamlpp import ModuleEnvironment
+from protein import ModuleEnvironment
 
 def define_env(env: ModuleEnvironment):
     "Define your functions, filters and variables here"
@@ -133,7 +133,7 @@ Here is the Python module:
 A sample module
 """
 import json
-from yamlpp import ModuleEnvironment
+from protein import ModuleEnvironment
 
 SERVERS_FILE = "servers.json"  # source of truth
 

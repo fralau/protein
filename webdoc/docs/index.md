@@ -1,24 +1,30 @@
-# YAML File Preprocessor (YAMLpp)
+# Protein Data Composer
 
 ## Problem
-YAML is an excellent file format but it is essentially static. Sometimes, the content of a YAML file must change according to circumstances (typically when the environment changes or when you have different
+
+Nowadays, a lot of software is piloted by data files, typically JSON or YAML files.
+
+
+JSON and YAML are excellent file formats but they are essentially static. Sometimes, the content of a file must change according to circumstances (typically when the environment changes or when you have different
 configuratons for test or production, etc.). 
 
 
-Manually maintaining different versions with the same boiler-plate code can be time-consuming and error-prone.
+Manually maintaining different versions with the same boiler-plate data can be time-consuming and error-prone.
 
 
-## Introducing YAMLpp
-What if we had a way to generate a new YAML file (or more than one) according to a single pattern?
+## Introducing Protein
+What if we had a way to generate a new data file (or more than one) according to a single pattern?
 
-The purpose of **YAML Preprocessor (YAMLpp)** is to help programmers prepare YAML files from a template, with rules that produce the YAML tree according to source data. It extends standard YAML with constructs for variable declaration, conditionals, iteration, functions, importing and exporting YAML files, and importing Python modules.
+The purpose of **Protein** is to help programmers prepare data files from a template, with rules that produce your data tree according to source data. 
 
-YAMLpp is a macro language, since it manipulates the YAML tree on which it resides.
+It extends standard YAML with constructs for variable declaration, conditionals, iteration, functions, importing and exporting YAML files, and importing Python modules.
+
+Protein is a macro language, since it manipulates the YAML tree on which it resides.
 
 
 Here is a simple example:
 
-**YAMLpp**:
+**Protein**:
 ```yaml
 .local:
   name: "Alice"
@@ -36,11 +42,11 @@ message: "Hello, Alice!"
 The language is composed of **constructs**, which are denoted keys starting with a dot (`.`), such
 as `.local`, `.if`, `.switch`, etc.
 
-The YAMLpp preprocessor uses these constructs modify the tree, and the constructs disappear.
+The Protein preprocessor uses these constructs modify the tree, and the constructs disappear.
 
 The result is pure YAML.
 
-!!!Tip "YAMLpp obeys the rules of YAML syntax"
+!!!Tip "Protein obeys the rules of YAML syntax"
     - It provides declarative constructs without breaking YAML syntax. 
     - It allows modular, reusable, and expressive constructs that generate YAML files.
 
@@ -54,25 +60,25 @@ The result is pure YAML.
 
 ### Installation
 ```sh
-pip install yamlpp-lang
+pip install protein-lang
 ```
 
 ### Command-line usage
 ```sh
-yamlpp input.yaml -o output.yaml
+protein input.yaml -o output.yaml
 ```
 - `input.yaml` → your YAML file with YPP directives  
 - `output.yaml` → the fully expanded YAML after preprocessing  
 
 To consult the help:
 ```sh
-yamlpp --help
+protein --help
 ```
 
 
 ### Introduction to the Python API
 ```python
-from yamlpp import Interpreter
+from protein import Interpreter
 
 FILENAME = 'test2.yaml'
 i = Interpreter()

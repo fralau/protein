@@ -1,5 +1,5 @@
 [project]
-name = "yamlpp-lang"
+name = "protein"
 version = "0.3.3"
 description = "YAMLpp: a macro language for dynamic YAML preprocessing"
 readme = "README.md"
@@ -20,7 +20,8 @@ dependencies = [
 license = { file = "LICENSE" }
 
 [project.scripts]
-yamlpp = "yamlpp.cli:main"
+protein = "protein.cli:main"
+yamlpp = "protein.cli:main"  # temporary alias
 
 [tool.setuptools.packages.find]
 where = ["."]

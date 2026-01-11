@@ -2,7 +2,7 @@ import pytest
 from io import StringIO
 
 # Import your loader + global YAML_RT
-from yamlpp.util import load_yaml, to_yaml
+from protein.util import load_yaml, to_yaml
 
 
 def test_roundtrip_preserves_comments():

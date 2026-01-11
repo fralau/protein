@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 
 
-from yamlpp import Interpreter
-from yamlpp.error import YAMLppError, YAMLValidationError
-from yamlpp.util import print_yaml, load_yaml
+from protein import Interpreter
+from protein.error import YAMLppError, YAMLValidationError
+from protein.util import print_yaml, load_yaml
 
 CURRENT_DIR = Path(__file__).parent 
 

@@ -8,7 +8,7 @@ import pytest
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 
-from yamlpp.util import to_yaml  # adjust import path if needed
+from protein.util import to_yaml  # adjust import path if needed
 
 # -------------------------
 # Basic behavior

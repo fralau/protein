@@ -6,9 +6,9 @@ from pathlib import Path
 from string import Template
 
 
-from yamlpp import yamlpp_comp 
-from yamlpp.error import YAMLppError
-from yamlpp.util import print_yaml
+from protein import protein_comp 
+from protein.error import YAMLppError
+from protein.util import print_yaml
 
 def test_buffer_simple(tmp_path):
     "Simple test of a buffer"
@@ -29,7 +29,7 @@ def test_buffer_simple(tmp_path):
         .name: foo
         .filename: {EXPORT_FILENAME}
 """
-    yaml, tree = yamlpp_comp(program, tmp_path)
+    yaml, tree = protein_comp(program, tmp_path)
 
     out_file = Path(tmp_path) / EXPORT_FILENAME
     assert out_file.is_file()
@@ -172,7 +172,7 @@ def test_buffer_complete(tmp_path):
         .filename: "$filename"
 """) 
     program = template.substitute(filename=EXPORT_FILENAME) 
-    yaml, tree = yamlpp_comp(program, tmp_path)
+    yaml, tree = protein_comp(program, tmp_path)
     out_file = Path(tmp_path) / EXPORT_FILENAME
     assert out_file.is_file()
     with open(out_file) as f:

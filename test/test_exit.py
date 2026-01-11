@@ -1,7 +1,7 @@
 import pytest
 
-from yamlpp import Interpreter, yamlpp_comp
-from yamlpp.error import YAMLppExitError, YAMLppError
+from protein import Interpreter, protein_comp
+from protein.error import YAMLppExitError, YAMLppError
 
 
 
@@ -18,7 +18,7 @@ def test_exit_success():
     """
 
     with pytest.raises(YAMLppExitError) as exc:
-        yamlpp_comp(src)
+        protein_comp(src)
 
     assert exc.value.code == 3
     assert exc.value.message == "Fatal error"
@@ -38,7 +38,7 @@ def test_exit_default_code():
     """
 
     with pytest.raises(YAMLppExitError) as exc:
-        yamlpp_comp(src)
+        protein_comp(src)
     assert exc.value.code == 0
     assert exc.value.message == "Done"
     print("Exit str:", str(exc.value))
@@ -54,7 +54,7 @@ def test_exit_code_type_error():
     """
 
     with pytest.raises(YAMLppError) as exc:
-        yamlpp_comp(src)
+        protein_comp(src)
 
     assert "integer" in str(exc.value)
 
@@ -70,6 +70,6 @@ def test_exit_missing_message():
     """
 
     with pytest.raises(YAMLppError) as exc:
-        yamlpp_comp(src)
+        protein_comp(src)
 
     assert ".message" in str(exc.value)

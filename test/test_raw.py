@@ -3,8 +3,8 @@
 Test Jinja2 escaping ({% raw %}...{% endraw %})
 """
 
-from yamlpp import Interpreter
-from yamlpp.util import print_yaml
+from protein import Interpreter
+from protein.util import print_yaml
 
 
 def test_single_workflow_with_raw():

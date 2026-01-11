@@ -1,7 +1,7 @@
 import pytest
-from yamlpp import Interpreter, yamlpp_comp
-from yamlpp.util import print_yaml
-from yamlpp.error import YAMLppError
+from protein import Interpreter, protein_comp
+from protein.util import print_yaml
+from protein.error import YAMLppError
 
 
 def test_basic_add_function():
@@ -45,7 +45,7 @@ test:
             b: 5
             a: 6
 """
-    yaml, result = yamlpp_comp(yaml_text)
+    yaml, result = protein_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
 
     assert result.test[0].value == 7
@@ -86,7 +86,7 @@ test:
             env: prod
             max_retries: 3
 """
-    yaml, result = yamlpp_comp(yaml_text)
+    yaml, result = protein_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
 
     env1 = result.test[0].environment
@@ -135,7 +135,7 @@ test:
         .name: get_x
         .args: []
 """
-    yaml, result = yamlpp_comp(yaml_text)
+    yaml, result = protein_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
 
     assert result.test.value == 10
@@ -161,7 +161,7 @@ test:
         .name: f
         .args: [42]
 """
-    yaml, result = yamlpp_comp(yaml_text)
+    yaml, result = protein_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
 
     assert result.test.value == 42
@@ -200,7 +200,7 @@ test:
         .name: read_foos
         .args: []
 """
-    yaml, result = yamlpp_comp(yaml_text)
+    yaml, result = protein_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
 
     # Even though the function captured a reference to the mutable list,
@@ -236,7 +236,7 @@ test:
         .name: read_counter
         .args: []
 """
-    yaml, result = yamlpp_comp(yaml_text)
+    yaml, result = protein_comp(yaml_text)
     print_yaml(yaml, "Evaluation")
 
     assert result.test.value == 1
@@ -289,7 +289,7 @@ test:
 """
 
     with pytest.raises(YAMLppError) as e:
-        yaml, result = yamlpp_comp(yaml_text)
+        yaml, result = protein_comp(yaml_text)
     print("Error:", e.value)
     assert "'inner' not found" in str(e.value)
 
@@ -307,7 +307,7 @@ test:
         .args: [1, 2]
 """
     with pytest.raises(Exception):
-        yamlpp_comp(yaml_text)
+        protein_comp(yaml_text)
 
 
 def test_wrong_argument_count():
@@ -329,7 +329,7 @@ test:
         .args: [1]
 """
     with pytest.raises(YAMLppError):
-        yamlpp_comp(yaml_text)
+        protein_comp(yaml_text)
 
 
 def test_arguments_not_list():
@@ -351,4 +351,4 @@ test:
         .args: 123
 """
     with pytest.raises(YAMLppError):
-        yamlpp_comp(yaml_text)
+        protein_comp(yaml_text)

@@ -1,6 +1,6 @@
 import pytest
 from ruamel.yaml.comments import CommentedMap
-from yamlpp.dotenv import DotEnv   # adjust to your module name
+from protein.dotenv import DotEnv   # adjust to your module name
 
 
 # ---------------------------------------------------------------------------

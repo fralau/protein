@@ -3,9 +3,9 @@ Tests for the `.foreach` directive in YAMLpp.
 """
 
 import pytest
-from yamlpp import yamlpp_comp
-from yamlpp.error import YAMLppError
-from yamlpp.util import print_yaml
+from protein import protein_comp
+from protein.error import YAMLppError
+from protein.util import print_yaml
 
 
 def test_foreach_basic_list():
@@ -21,7 +21,7 @@ def test_foreach_basic_list():
           - "{{x}}"
     """
 
-    yaml, tree = yamlpp_comp(program)
+    yaml, tree = protein_comp(program)
     print_yaml(yaml, "Result")
     assert list(tree.result) == [1, 2, 3]
 
@@ -40,7 +40,7 @@ def test_foreach_basic_singleton():
           - "{{x}}"
     """
 
-    yaml, tree = yamlpp_comp(program)
+    yaml, tree = protein_comp(program)
     print_yaml(yaml, "Result")
     assert list(tree.result) == [1]
 
@@ -57,7 +57,7 @@ def test_foreach_map():
           - "{{item}}": 42
     """
 
-    yaml, tree = yamlpp_comp(program)
+    yaml, tree = protein_comp(program)
     print_yaml(yaml)
     assert tree.result.a == 42 
     assert tree.result.b == 42
@@ -76,7 +76,7 @@ def test_foreach_map_no_collect():
           - "{{item}}": 42
     """
 
-    yaml, tree = yamlpp_comp(program)
+    yaml, tree = protein_comp(program)
     print_yaml(yaml)
     assert tree.result[0].a == 42 
     assert tree.result[1].b == 42

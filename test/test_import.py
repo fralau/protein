@@ -1,10 +1,10 @@
 import pytest
 from pathlib import Path
 
-from yamlpp import Interpreter
-from yamlpp.util import print_yaml
-from yamlpp.error import YAMLppError
-from yamlpp.core import MappingEntry
+from protein import Interpreter
+from protein.util import print_yaml
+from protein.error import YAMLppError
+from protein.core import MappingEntry
 
 # ---------------------------------------------------------------------------
 # Utilities

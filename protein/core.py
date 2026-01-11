@@ -1257,7 +1257,7 @@ class Interpreter:
 
 
 
-def yamlpp_comp(program: str, working_dir: str | None = None) -> tuple[str, Node]:
+def protein_comp(program: str, working_dir: str | None = None) -> tuple[str, Node]:
     """
     Compile and execute a YAMLpp program.
 

@@ -68,7 +68,7 @@ yamlpp --help
 
 ### Python API
 ```python
-from yamlpp import Interpreter
+from protein import Interpreter
 
 FILENAME = 'my_file.yaml'
 i = Interpreter()

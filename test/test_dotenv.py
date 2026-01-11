@@ -1,8 +1,8 @@
 "Higher level tests on dotenv"
 
 from pathlib import Path
-from yamlpp import Interpreter
-from yamlpp.util import print_yaml
+from protein import Interpreter
+from protein.util import print_yaml
 
 
 CONFIG_FILENAME = 'test.env'

@@ -9,7 +9,7 @@ import ruamel.yaml
 from io import StringIO
 
 # --- import your functions ---
-from yamlpp.util import to_yaml, to_toml, to_json, normalize
+from protein.util import to_yaml, to_toml, to_json, normalize
 
 yaml = ruamel.yaml.YAML()
 

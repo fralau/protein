@@ -2,7 +2,7 @@
 Integration tests for the !load directive handled by Interpreter.handle_load.
 
 These tests:
-- use the real Interpreter from yamlpp
+- use the real Interpreter from protein
 - create real temporary files
 - verify correct deserialization
 - verify .format override
@@ -13,9 +13,9 @@ These tests:
 import pytest
 from pathlib import Path
 
-from yamlpp import Interpreter
-from yamlpp.error import YAMLppError, Error
-from yamlpp.util import to_yaml
+from protein import Interpreter
+from protein.error import YAMLppError, Error
+from protein.util import to_yaml
 
 def test_load_basic_yaml(tmp_path):
     """

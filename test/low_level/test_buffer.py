@@ -11,7 +11,7 @@ These tests validate:
 """
 
 import pytest
-from yamlpp.buffer import Indentation, infer_indent_level, render_buffer
+from protein.buffer import Indentation, infer_indent_level, render_buffer
 
 
 # -------------------------

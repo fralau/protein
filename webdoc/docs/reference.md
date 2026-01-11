@@ -480,7 +480,7 @@ None (the tree is exported to the external file)
 A sample module
 """
 
-from yamlpp import ModuleEnvironment
+from protein import ModuleEnvironment
 
 def define_env(env: ModuleEnvironment):
     @env.export

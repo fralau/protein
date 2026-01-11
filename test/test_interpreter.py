@@ -6,8 +6,8 @@ from pathlib import Path
 from super_collections import SuperDict
 
 
-from yamlpp import Interpreter
-from yamlpp.util import print_yaml
+from protein import Interpreter
+from protein.util import print_yaml
 
 CURRENT_DIR = Path(__file__).parent 
 
