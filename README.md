@@ -75,24 +75,6 @@ yamlpp --help
 ```
 
 
-### Python API
-```python
-from protein import Interpreter
-
-FILENAME = 'my_file.yaml'
-i = Interpreter()
-
-# the initial (source) tree:
-initial_tree = i.load(FILENAME)
-
-# the destination (target) tree (pure YAML):
-tree = i.render()
-
-# print the resulting YAML
-print(i.yaml)
-```
-
-
 
 
 

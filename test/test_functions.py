@@ -1,5 +1,5 @@
 import pytest
-from protein import Interpreter, protein_comp
+from protein import protein_comp
 from protein.util import print_yaml
 from protein.error import YAMLppError
 

@@ -79,15 +79,36 @@ protein --help
 
 
 ### Introduction to the Python API
+
+Protein offers a Python interface.
+
+#### Simple interface
+
+The simplest way is to use the `protein_comp()` function:
+
+```python
+from protein import protein_comp
+
+yaml_text = """
+...
+"""
+
+yaml, result = protein_comp(yaml_text)
+```
+
+You can also specify a default ("source") directory, where input and output
+files are expected to be (otherwise it will be by default your current directory).
+
+
+### Using an Interpreter object
+
 ```python
 from protein import Interpreter
 
 FILENAME = 'test2.yaml'
-i = Interpreter()
-i.load(FILENAME)
-
-tree = i.render()
-result = i.yaml # contains the yaml file
+i = Interpreter() # by default 
+tree = i.load(FILENAME) # the is the compiled file 
+yaml_output = i.yaml # contains the yaml file
 
 
 # Access to fields of the final tree
@@ -97,3 +118,19 @@ url = tree['server'].['url'] # 'http://test.example.com'
 url = tree.server.url
 ```
 
+When defining the Interpreter object, you can also specify a default ("source") directory,
+where input and output
+files are expected to be (otherwise it will be by default the location of your input file,
+or your current directory).
+
+
+You can also suspend the rendering:
+
+```python
+i = Interpreter()
+i.load(FILENAME, render=False) # suspend rendering
+
+# now render:
+tree = i.render_tree()
+yaml_output = i.yaml # if render_tree() was not called before, it will trigger it.
+```
