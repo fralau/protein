@@ -1,28 +1,31 @@
 # Advanced Aspects of Protein
 
-## The Collapse Rule
+## The Collapse Rules
 
 ### Definition
 
 !!! Tip "Important"
-    The **Collapse Rule** is key to understand how YAMLLpp results are processed by the `.do` construct.
+    The **Collapse Rules** are key to understand how YAMLLpp results are processed by Protein
+    constructs (`.do` and `.foreach`).
 
-    It defines how Protein reduces **sequences** of actions into simpler semantic forms.
-    It governs how loop expansions and other generative constructs produce final YAML structures.
+    It defines how Protein reduces empty **sequences** or **mappings** into simpler structures.
+    It governs how Protein constructs produce final YAML structures.
 
-    This rule is central to Protein semantics because it ensures that it behaves in a way that
+    This rule is central to Protein, because it ensures that it behaves in a way that
     least surprises users.
 
 
-A sequence collapses according to the following principles:
+### `.do` producing sequences
+
+A sequence produced by a `.do` constructs collapses according to the following principles:
 
 1. **Empty sequence → `None`**  
   An empty list represents the absence of a value
 
-2. **Single‑element sequence → the element itself**  
+1. **Single‑element sequence → the element itself**  
   When a construct yields exactly one item, it is returned directly without wrapping.
 
-3. **Otherwise → no collapse**  
+1. **Otherwise → no collapse**  
   If the sequence does not meet the above conditions, it is returned unchanged.
 
 
@@ -89,7 +92,7 @@ result:
 
 ### `.foreach` producing a collected mapping
 
-However the `.foreach` loop naturally collects of a **sequence of mappings of cardinality 1**, into a single merged mapping.
+However the `.foreach` loop will do one additional thing: it collects of a **sequence of mappings of cardinality 1** produced by the `.do` construct into a single merged mapping.
 
 #### Example
 

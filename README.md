@@ -59,7 +59,7 @@ The result is pure YAML.
 
 ### Installation
 ```bash
-pip install yamlpp-lang
+pip install protein-lang
 ```
 
 ### Command-line usage
