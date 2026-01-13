@@ -1069,6 +1069,13 @@ class Interpreter:
         else:
             raise TypeError(f"The argument provided '{args}' is not a map/sequence but a { type(args).__name__}")       
 
+        # evaluate each argument:
+        for key in assigned_args:
+            value = assigned_args[key]
+            if isinstance(value, str):
+                assigned_args[key] = self.evaluate_expression(assigned_args[key])
+            else:
+                assigned_args[key] = self.process_node(assigned_args[key])
         # create the new block and copy the arguments as context
         actions = function['.do']
         if isinstance(actions, str):

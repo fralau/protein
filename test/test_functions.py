@@ -54,6 +54,54 @@ test:
     assert result.test[3].value == 10
     assert result.test[4].value == 11
 
+
+def test_basic_add_function_with_variables():
+    """
+    Ensure that a simple `.function` returning an addition
+    evaluates correctly across multiple `.call` invocations
+    (with variables).
+
+    Invocations are by position or by value
+    """
+    yaml_text = """
+test:
+  .do:
+    - .function:
+        .name: add
+        .args: [a, b]
+        .do:
+          value: "{{ a + b }}"
+
+
+    - .define:
+        x: 7
+        y: 8
+    - .call: # using scalar variables (mapping)
+        .name: add
+        .args: 
+            a: "{{ x }}"
+            b: "{{ y }}" 
+    - .call: # using scalar variables (sequence)
+        .name: add
+        .args: ["{{ x }}", "{{ y }}"]
+
+    - .define:
+        x: [1, 2, 3]
+        y: [4, 5, 6]
+    - .call: # using sequence (list) variables (concatenation)
+        .name: add
+        .args: 
+            a: "{{ x }}"
+            b: "{{ y }}" 
+"""
+    yaml, result = protein_comp(yaml_text)
+    print_yaml(yaml, "Evaluation")
+
+    assert result.test[0].value == 15
+    assert result.test[1].value == 15
+    assert result.test[2].value == [1, 2, 3, 4, 5, 6]
+
+
 def test_mapping_return_function():
     """
     Ensure that a `.function` returning a mapping produces the expected

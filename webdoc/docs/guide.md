@@ -220,16 +220,16 @@ To simplify make the code more abstract, we use a function.
 # docker-compose.Protein
 
 .define:
-  maintainer: "Laurent"
-  version: "1.0"
+  maintainer: "Joe Bloe"
+  version: "'1.0'"
   services:
     - {name: "api", image: "myorg/api:latest", port: 8080}
     - {name: "worker", image: "myorg/worker:latest", port: 9090}
     - {name: "frontend", image: "myorg/frontend:latest", port: 3000}
 
 # Define a reusable function for a service
-.function
-  .name: service:
+.function:
+  .name: create_service
   .args: [svc]
   .do:
     "{{ svc.name }}":
@@ -244,15 +244,20 @@ To simplify make the code more abstract, we use a function.
 version: "3.9"
 
 services:
-  .foreach svc in services:
-    .call service(svc)
+  .foreach:
+    .values: [svc, "{{ services }}"]
+    .do:
+      - .print: "Defining service {{ svc }}"
+      - .call: 
+          .name: create_service
+          .args: ["{{ svc }}"]
 ```
 
 
 ### Output
 
 ```yaml
-version: "3.9"
+version: '3.9'
 
 services:
   api:
@@ -261,8 +266,8 @@ services:
     ports:
       - "8080:8080"
     labels:
-      maintainer: "Laurent"
-      version: "1.0"
+      maintainer: "Joe Bloe"
+      version: '1.0'
 
   worker:
     image: "myorg/worker:latest"
@@ -270,8 +275,8 @@ services:
     ports:
       - "9090:9090"
     labels:
-      maintainer: "Laurent"
-      version: "1.0"
+      maintainer: "Joe Bloe"
+      version: '1.0'
 
   frontend:
     image: "myorg/frontend:latest"
@@ -279,8 +284,8 @@ services:
     ports:
       - "3000:3000"
     labels:
-      maintainer: "Laurent"
-      version: "1.0"
+      maintainer: "Joe Bloe"
+      version: '1.0'
 ```
 
 
