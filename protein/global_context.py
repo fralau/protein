@@ -1,10 +1,12 @@
 """
-Defining the GLOBAL context for a Protein interpreter.
+Defining the GLOBAL context (capabilities) for a Protein interpreter.
 
 NOTE:
     What we define as "global" is not the same as in most languages.
     It is simply a part of the first frame on the lexical stack,
     which contains necessary functions.
+
+    This file should contain ONLY functions that require no interpreter state.
 
     (It is on top of the Jinja2 utilities.)
 """

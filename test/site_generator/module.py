@@ -7,7 +7,6 @@ from pathlib import Path
 import glob as _glob
 
 from markdown_it import MarkdownIt
-
 from protein import ModuleEnvironment
 
 
@@ -18,45 +17,6 @@ PROTEIN_FILE_DIR = Path(__file__).resolve().parent
 
 def define_env(env: ModuleEnvironment):
     "Define your functions, filters and variables here"
-
-    @env.export
-    def glob(pattern: str) -> list[str]:
-        """
-        Minimal, predictable glob function.
-
-        - Accepts a shell-style glob pattern (e.g. 'content/*.md')
-        - Resolves relative patterns from the module's source directory
-        - Returns paths relative to the module's source directory
-        - Raises an error if the pattern attempts to escape the module directory
-        """
-        base = env.source_dir
-        pattern_path = Path(pattern)
-
-        # Resolve relative patterns inside the module's universe
-        if not pattern_path.is_absolute():
-            pattern_path = base / pattern_path
-
-        # SECURITY: ensure the *pattern itself* does not escape
-        try:
-            pattern_path.resolve().relative_to(base)
-        except ValueError:
-            raise ValueError(f"glob pattern escapes module directory: {pattern!r}")
-
-        results = []
-
-        for match in _glob.glob(str(pattern_path)):
-            abs_path = Path(match).resolve()
-
-            # SECURITY: ensure each match is inside the module universe
-            try:
-                rel = abs_path.relative_to(base)
-            except ValueError:
-                raise ValueError(f"glob result escapes module directory: {abs_path}")
-
-            results.append(str(rel))
-
-        return sorted(results)
-
 
 
     # Create a single parser instance (fast, reusable)

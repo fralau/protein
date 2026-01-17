@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 # import textwrap
 from collections.abc import Sequence, Mapping
-
+from functools import partial
 
 
 
@@ -22,8 +22,8 @@ from pprint import pprint
 
 from .stack import Stack
 from .global_context import GLOBAL_CONTEXT # the fundamental context on a Protein interpreter's lexical stack
-from .util import load_yaml, validate_node, parse_yaml, safe_path, print_yaml 
-from .util import check_name, get_full_filename
+from .util import load_yaml, validate_node, parse_yaml, print_yaml 
+from .util import check_name, get_full_filename, safe_path, safe_glob 
 from .util import to_yaml, serialize, get_format, deserialize, normalize, collapse_seq, collapse_maps
 from .util import CommentedMap, CommentedSeq # Patched versions (DO NOT CHANGE THIS!)
 from .util import extract_identifier, LITERAL_PREFIX, strip_prefix
@@ -272,7 +272,9 @@ class Interpreter:
         env.filters = Stack(base_filters)
 
         # Push our own global context (copy!)
-        env.globals.push(GLOBAL_CONTEXT.copy())
+        base_context = GLOBAL_CONTEXT.copy()
+        base_context['glob'] = partial(safe_glob, self.source_dir)
+        env.globals.push(base_context)
 
         # Add interpreter-specific functions/filters
         env.globals.update(self._functions)

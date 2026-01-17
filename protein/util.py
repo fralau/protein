@@ -81,12 +81,97 @@ def safe_path(root: str | Path, pathname: str | Path) -> Path:
 
     return candidate
 
+
+def safe_output_path(root: Path, resolved: Path) -> Path:
+    """
+    Validate a resolved filesystem path returned by the OS.
+
+    - `resolved` must already be absolute and normalized.
+    - Enforce containment inside `root`.
+    - Enforce existence.
+    - Do not perform any resolution or interpretation.
+    """
+    root = Path(root).resolve()
+    resolved = Path(resolved)
+
+    # 1. Enforce containment (detect symlink/bind-mount escapes)
+    try:
+        resolved.relative_to(root)
+    except ValueError:
+        raise FileNotFoundError(f"Path escapes root: {resolved}")
+
+    # 2. Enforce existence
+    if not resolved.exists():
+        raise FileNotFoundError(f"Path does not exist: {resolved}")
+
+    return resolved
+
+
 def get_full_filename(source_dir:str, filename:str) -> str:
     "Get the full filename, making sure that it exists"
     full_filename = Path(source_dir) / filename
      # ✅ Ensure the parent directory exists (CI-safe)
     Path(full_filename).parent.mkdir(parents=True, exist_ok=True)
     return full_filename
+
+
+import glob as _glob
+
+def safe_output_path(root: Path, resolved: Path) -> Path:
+    """
+    Validate a resolved filesystem path returned by the OS.
+
+    - `resolved` must already be absolute and normalized.
+    - Enforce containment inside `root`.
+    - Enforce existence.
+    - Do not perform any resolution or interpretation.
+    """
+    root = Path(root).resolve()
+    resolved = Path(resolved)
+
+    # 1. Enforce containment (detect symlink/bind-mount escapes)
+    try:
+        resolved.relative_to(root)
+    except ValueError:
+        raise FileNotFoundError(f"Path escapes root: {resolved}")
+
+    # 2. Enforce existence
+    if not resolved.exists():
+        raise FileNotFoundError(f"Path does not exist: {resolved}")
+
+    return resolved
+
+def safe_glob(source_dir: Path, pattern: str) -> list[str]:
+    """
+    General, unbound glob implementation, with sandboxing
+    The interpreter binds `source_dir` via functools.partial.
+
+    Semantics:
+    - Validate the pattern root using safe_input_path.
+    - Expand the glob pattern inside the sandbox.
+    - Resolve each match and validate it using safe_output_path.
+    - Return paths relative to source_dir.
+    """
+    pattern = Path(pattern)
+
+    # 1. Validate the directory in which globbing occurs
+    pattern_root = safe_path(source_dir, pattern.parent)
+
+    # 2. Construct the actual glob pattern
+    glob_pattern = str(pattern_root / pattern.name)
+
+    results = []
+    for match in _glob.glob(glob_pattern):
+        resolved = Path(match).resolve()
+
+        # 3. Validate the resolved match (symlink-safe)
+        safe = safe_output_path(source_dir, resolved)
+
+        # 4. Return paths relative to the module root
+        results.append(str(safe.relative_to(source_dir)))
+
+    return sorted(results)
+
 
 # -------------------------
 # Interpretation
