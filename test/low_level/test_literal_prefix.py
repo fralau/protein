@@ -7,44 +7,39 @@ from string import Template
 
 import pytest
 from protein import Interpreter
-from protein.util import LITERAL_PREFIX, strip_prefix
+from protein.util import LITERAL_PREFIX, dequote
 
 # -------------------------
-# strip_prefix tests
+# dequote tests
 # -------------------------
 
-def test_strip_prefix_present():
+def test_dequote_present():
     s = f"{LITERAL_PREFIX}   Hello world"
-    assert strip_prefix(s) == "Hello world"
+    assert dequote(s) == "Hello world"
 
 
-def test_strip_prefix_absent():
+def test_dequote_absent():
     s = "Hello world"
-    assert strip_prefix(s) == "Hello world"
+    assert dequote(s) == "Hello world"
 
 
-def test_strip_prefix_exact_prefix():
+def test_dequote_exact_prefix():
     s = LITERAL_PREFIX
-    assert strip_prefix(s) == ""
+    assert dequote(s) == ""
 
 
-def test_strip_prefix_non_string():
-    assert strip_prefix(123) == 123
+def test_dequote_non_string():
+    with pytest.raises(TypeError):
+        assert dequote(123) == 123
 
 
 # -------------------------
 # evaluate_expression tests
 # -------------------------
 
-def make_engine():
-    p = Interpreter()
-    # p.stack = [{}]
-    return p
-
-
 def test_eval_preserves_prefix_in_normal_mode():
     "In normal mode, the literal prefix is preserved"
-    p = make_engine()
+    p = Interpreter()
 
     # Build the expression safely using Template
     expr = Template("$prefix Hello {{ name }}").substitute(prefix=LITERAL_PREFIX)
@@ -55,7 +50,7 @@ def test_eval_preserves_prefix_in_normal_mode():
 
 def test_eval_strips_prefix_in_final_mode():
     "In final mode, the literal prefix is stripped"
-    p = make_engine()
+    p = Interpreter()
 
     expr = Template("$prefix Hello {{ name }}").substitute(prefix=LITERAL_PREFIX)
 
@@ -65,7 +60,7 @@ def test_eval_strips_prefix_in_final_mode():
 
 def test_eval_runs_jinja_when_no_prefix():
     "When there is no literal prefix, Jinja2 is evaluated normally"
-    p = make_engine()
+    p = Interpreter()
     p.stack["name"] = "Laurent"
 
     expr = "Hello {{ name }}"

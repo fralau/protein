@@ -40,12 +40,14 @@ FILE_FORMATS = ['yaml', 'json', 'toml', 'python', 'ypp', 'env',
 # The prefix that marks a string as literal (not to be interpreted by Protein)
 LITERAL_PREFIX = "#!literal"
 
-def strip_prefix(s: str, prefix=LITERAL_PREFIX) -> str:
+def dequote(s: str, prefix=LITERAL_PREFIX) -> str:
     """
     If the string starts with the prefix, strip it and return the rest"
     (by default, uses the literal prefix).
     """
-    if isinstance(s, str) and s.startswith(prefix):
+    if not isinstance(s, str):
+        raise TypeError("dequote() expects a string")
+    if s.startswith(prefix):
         return s[len(prefix):].lstrip()
     return s
 
@@ -176,14 +178,14 @@ def safe_glob(source_dir: Path, pattern: str) -> list[str]:
 # -------------------------
 # Interpretation
 # -------------------------
-def dequote(jinja2_result:str) -> Any:
-    """
-    Dequote a data structure.
-    In other words, it's content is deserialized (evaluated)
-    """
-    if not isinstance(jinja2_result, str):
-        raise ValueError(f"Value passed is {type(jinja2_result).__name__} and not str.")
-    return ast.literal_eval(jinja2_result)
+# def dequote(jinja2_result:str) -> Any:
+#     """
+#     Dequote a data structure.
+#     In other words, it's content is deserialized (evaluated)
+#     """
+#     if not isinstance(jinja2_result, str):
+#         raise ValueError(f"Value passed is {type(jinja2_result).__name__} and not str.")
+#     return ast.literal_eval(jinja2_result)
 
 
 # -------------------------

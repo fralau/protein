@@ -14,9 +14,10 @@ NOTE:
 import os
 
 import keyring
+from markdown_it import MarkdownIt
 
 from .sql import osquery
-from .util import strip_prefix
+from .util import dequote, LITERAL_PREFIX
 
 
 
@@ -42,6 +43,43 @@ def jinja_assert(condition, message=None):
 
 
 
+def quote(value: str) -> str:
+    """
+    Mark the given string as literal by prefixing the #!literal sentinel.
+
+    This transformation is idempotent: if the value is already quoted,
+    it is returned unchanged. It is the inverse of `dequote`.
+    """
+    if not isinstance(value, str):
+        raise TypeError("quote() expects a string")
+    if value.startswith(LITERAL_PREFIX):
+        return value
+    return f"{LITERAL_PREFIX}{value}"
+
+
+
+
+# Create a single parser instance (fast, reusable)
+_md = MarkdownIt()
+
+def to_html(s: str) -> str:
+    """
+    Convert Markdown text to HTML using markdown-it-py.
+
+    - Deterministic output
+    - Safe for use inside Protein templates
+
+    Forward‑compatibility:
+        This function currently assumes Markdown as the native markup format.
+        Future versions may accept an explicit `format` argument to support
+        additional markup languages.
+    """
+    if not isinstance(s, str):
+        raise TypeError("render_markdown_to_html expects a string")
+
+    return _md.render(s)
+
+
 # ---------------------------------
 # Global functions for Jinja2
 # ---------------------------------
@@ -55,11 +93,23 @@ GLOBAL_CONTEXT = {
     # needed for accessing operating system info (security, etc.)
     "osquery": osquery, 
 
+    # for debugging the host environment from Protein expressions 
+    "assert": jinja_assert,
+
+    }
+
+GLOBAL_FILTERS = {
+
+    # needed for Jinja, to prevent interpretation of a template
+    "quote": quote,
+
     # needed in Jinja, if the literal prefix of a template must be stripped
     # so that the string can be evaluated.
     # In Lisp, it would not be unlike the comma (,)
-    "dequote": strip_prefix, 
+    "dequote": dequote, 
 
-    # for debugging the host environment from Protein expressions 
-    "assert": jinja_assert
-    }
+    # converting Markdown to HTML
+    "to_html": to_html
+}
+
+GLOBAL_CONTEXT.update(GLOBAL_FILTERS)

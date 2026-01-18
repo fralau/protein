@@ -66,7 +66,7 @@
             <body>
               <h1>{{ page.meta.title }}</h1>
               <ul>
-              {{ render_markdown_to_html(page.text)}}
+              {{ page.text | to_html }}
               </ul>
               <footer>© {{ page.meta.author }}</footer>
             </body>

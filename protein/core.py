@@ -21,12 +21,13 @@ from jinja2.exceptions import UndefinedError as Jinja2UndefinedError
 from pprint import pprint
 
 from .stack import Stack
-from .global_context import GLOBAL_CONTEXT # the fundamental context on a Protein interpreter's lexical stack
+# the fundamental context on a Protein interpreter's lexical stack:
+from .global_context import GLOBAL_CONTEXT, GLOBAL_FILTERS
 from .util import load_yaml, validate_node, parse_yaml, print_yaml 
 from .util import check_name, get_full_filename, safe_path, safe_glob 
 from .util import to_yaml, serialize, get_format, deserialize, normalize, collapse_seq, collapse_maps
 from .util import CommentedMap, CommentedSeq # Patched versions (DO NOT CHANGE THIS!)
-from .util import extract_identifier, LITERAL_PREFIX, strip_prefix
+from .util import extract_identifier, LITERAL_PREFIX, dequote
 from .buffer import render_buffer, Indentation
 from .error import YAMLppError, Error, JinjaExpressionError, YAMLppExitError
 from .import_modules import get_exports
@@ -275,6 +276,8 @@ class Interpreter:
         base_context = GLOBAL_CONTEXT.copy()
         base_context['glob'] = partial(safe_glob, self.source_dir)
         env.globals.push(base_context)
+        filter_context = GLOBAL_FILTERS.copy()
+        env.filters.push(filter_context)
 
         # Add interpreter-specific functions/filters
         env.globals.update(self._functions)
@@ -573,7 +576,7 @@ class Interpreter:
         if str_expr.startswith(LITERAL_PREFIX):
             if final:
                 # strip the prefix, for final output
-                return strip_prefix(str_expr)
+                return dequote(str_expr)
             else:
                 # normal case: return as is
                 return str_expr
