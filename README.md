@@ -1,4 +1,4 @@
-# Protein, a Data Composer and Templating Tool
+# Protein, a Data Composer and Templating Language
 
 ![PyPI](https://img.shields.io/pypi/v/protein-lang)
 ![CI](https://github.com/fralau/protein/actions/workflows/pypi.yml/badge.svg)
