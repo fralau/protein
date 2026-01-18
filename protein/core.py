@@ -62,11 +62,6 @@ STRING_LIKE = str, Path
 
 
 
-# class Indentation(int):
-#     "Relative indentation in no of units"
-#     pass
-
-
 class MappingEntry:
     """
     A key value entry
@@ -670,7 +665,7 @@ class Interpreter:
         if not isinstance(entry.value, STRING_LIKE):
             self.raise_error(entry.value, Error.TYPE,
                              "Value must be a string")
-        return self.evaluate_expression(entry.value, final=True)
+        return self.evaluate_expression(dequote(entry.value))
 
     # ---------------------
     # Variables

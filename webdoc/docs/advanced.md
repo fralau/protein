@@ -299,6 +299,6 @@ To dequote a template (without evaluating it right away):
   raw_text: "#!literal Hello {{ name }}"
 
   # dequoting:
-  text: "{{ raw_text | dequote }}
+  text: "{{ raw_text | dequote }}"
 ```
 

@@ -54,9 +54,6 @@
   -  .foreach:
       .values: [page, "{{ sitemap }}"]
       .do:
-        # .define:
-        #   page: "{{ correct_page(entry, author) }}"
-        # .print: "Page: {{ page }}"
         .write:
           .filename: "site/{{ page.meta.slug }}.html"
           .text: |
