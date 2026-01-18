@@ -5,8 +5,8 @@
 ### Definition
 
 !!! Tip "Important"
-    The **Collapse Rules** are key to understand how YAMLLpp results are processed by Protein
-    constructs (`.do` and `.foreach`).
+    The **Collapse Rules** are key to understand how data produced by Protein constructs are processed by 
+    other Protein constructs (`.do` and `.foreach`).
 
     It defines how Protein reduces empty **sequences** or **mappings** into simpler structures.
     It governs how Protein constructs produce final YAML structures.
@@ -218,11 +218,20 @@ If you want, I can show the idiomatic pattern for generating **multiple workflow
 ### Permanent solution to avoid interpretation
 
 The solution to guarantee that a string will _never_ be used as a template,
-is to the `#!literal` prefix in front of it, for example:
+is to use the `#!literal` prefix in front of it, for example:
 
 ```yaml
-.text: "#!literal Hello {{ name }}"
+.define:
+  text: "#!literal Hello {{ name }}"
 ```
+
+You can also use a Jinja expression that contains the template, with the `quote` filter:
+
+```yaml
+.define:
+  text: "{{ 'Hello {{ name }}' | quote }}"
+```
+
 
 This will guarantee that Protein will never consider that string as a template, until
 the value is exported:
@@ -280,6 +289,16 @@ The result is a directory‑like structure:
 ```
 
 
+### Dequoting
+
+To dequote a template (without evaluating it right away):
 
 
+```yaml
+.define:
+  raw_text: "#!literal Hello {{ name }}"
+
+  # dequoting:
+  text: "{{ raw_text | dequote }}
+```
 

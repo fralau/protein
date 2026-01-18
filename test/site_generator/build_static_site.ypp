@@ -25,10 +25,12 @@
       .values: [fname, "{{ pages }}"]
       .do:
         .print: "Reading {{ fname }}"
-        .load: 
-          .filename: "{{ fname }}"
-          .format: markdown
-            
+        .correct_page: # complete and validate the page's meta
+          page: 
+            .load:
+              .filename: "{{ fname }}"
+              .format: markdown        
+          author: "{{ author }}"
 .do:
   - .print: "Sitemap: {{ sitemap }}"
   - .do: "{{ assert(sitemap, 'Sitemap is empty')}}"
@@ -50,11 +52,11 @@
 
   # Emit one HTML file per page
   -  .foreach:
-      .values: [entry, "{{ sitemap }}"]
+      .values: [page, "{{ sitemap }}"]
       .do:
-        .define:
-          page: "{{ correct_page(entry, author) }}"
-        .print: "Page: {{ page }}"
+        # .define:
+        #   page: "{{ correct_page(entry, author) }}"
+        # .print: "Page: {{ page }}"
         .write:
           .filename: "site/{{ page.meta.slug }}.html"
           .text: |
@@ -84,8 +86,7 @@
         <body>
           <h1>{{ site_title }}</h1>
           <ul>
-          {% for entry in sitemap %}
-          {% set page = correct_page(entry, author) %}
+          {% for page in sitemap %}
             <li><a href="{{ page.meta.slug }}.html">{{ page.meta.title }}</a></li>
           {% endfor %}
           </ul>

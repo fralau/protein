@@ -143,13 +143,13 @@ class Interpreter:
     # When you create a new construct:
     #  - Create the handler
     #  - Register it in this list
-    CONSTRUCTS = ('.local','.define',
+    CONSTRUCTS = ('.print', '.eval',
+                  '.local', '.define',
                   '.do', '.foreach', '.switch', '.if', '.exit',
                   '.load', '.import', '.import_module', 
                   '.function', '.call',  
                   '.def_sql', '.exec_sql', '.load_sql',
-                  '.export', '.write', '.open_buffer', '.write_buffer', '.save_buffer',
-                  '.print')
+                  '.export', '.write', '.open_buffer', '.write_buffer', '.save_buffer')
 
 
 
@@ -649,6 +649,7 @@ class Interpreter:
 
 
 
+
     # ---------------------
     # Printing
     # ---------------------
@@ -658,6 +659,18 @@ class Interpreter:
         """
         output = self.evaluate_expression(entry.value)
         print(output, file=sys.stderr)
+
+    # ---------------------
+    # Evaluating
+    # ---------------------
+    def handle_eval(self, entry:MappingEntry) -> str:
+        """
+        Forces evaluation of a string, even if literal
+        """
+        if not isinstance(entry.value, STRING_LIKE):
+            self.raise_error(entry.value, Error.TYPE,
+                             "Value must be a string")
+        return self.evaluate_expression(entry.value, final=True)
 
     # ---------------------
     # Variables
@@ -1283,6 +1296,8 @@ class Interpreter:
     # -------------------------
     def handle_binding(self, key:str, entry:MappingEntry) -> Node:
         """
+        FFI (Foreign Function Interface)
+        
         Handle a call to a Python callable (function) in the stack.
 
         Forms:
